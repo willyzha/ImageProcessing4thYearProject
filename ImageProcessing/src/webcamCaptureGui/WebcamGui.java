@@ -16,6 +16,8 @@ import org.opencv.highgui.VideoCapture;
 
 
 public class WebcamGui extends JFrame{
+
+	private static final long serialVersionUID = 1L;
 	private static final int WEBCAM_PX_HEIGHT = 240; // 720
 	private static final int WEBCAM_PX_WIDTH = 240; // 1280
 

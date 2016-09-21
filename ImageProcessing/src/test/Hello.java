@@ -3,8 +3,6 @@ package test;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.awt.image.ImageProducer;
-
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfRect;
@@ -52,7 +50,7 @@ public class Hello
 
 		Mat image = new Mat();
 		if (capture.read(image)) {
-			Imgproc.resize(image, image, new Size(240, 240));
+			Imgproc.resize(image, image, new Size(240, 240), 0, 0, Imgproc.INTER_CUBIC);
 			System.out.println("Sucessful");
 			String filename = "webcamOut.png";
 			Highgui.imwrite(filename, image);
