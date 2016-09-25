@@ -11,15 +11,20 @@ import javax.swing.JLabel;
 
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
+import org.opencv.objdetect.CascadeClassifier;
 
 
 public class WebcamGui extends JFrame{
 
 	private static final long serialVersionUID = 1L;
-	private static final int WEBCAM_PX_HEIGHT = 240; // 720
-	private static final int WEBCAM_PX_WIDTH = 240; // 1280
+	private static final int WEBCAM_PX_WIDTH = 640;
+	private static final int WEBCAM_PX_HEIGHT =  480;
 
 	private JLabel videoFrame;
 	
@@ -40,21 +45,31 @@ public class WebcamGui extends JFrame{
 		Thread webcam = new Thread() {
 			public void run() {
 				VideoCapture capture = new VideoCapture(0);
+
+				capture.open(0);
 				capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
 				capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
-				capture.open(0);
 				
 				Mat image = new Mat();
 				capture.read(image);
 				String filename = "webcamOut.png";
 				Highgui.imwrite(filename, image);
-				
+								
 				while (true && isVisible()) {			
 					if (capture.read(image)) {
 						System.out.println("Sucessful");
 
 					}	  
 			
+					CascadeClassifier circleDetector = new CascadeClassifier("cascade.xml");
+
+					MatOfRect detections = new MatOfRect();
+					circleDetector.detectMultiScale(image, detections);
+					
+					for (Rect rect : detections.toArray()) {
+						Core.rectangle(image, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
+					}
+					
 					ImageIcon frame = new ImageIcon(bufferedImage(image));
 					System.out.println("START");
 
