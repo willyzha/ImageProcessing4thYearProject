@@ -2911,7 +2911,6 @@ E:\workspace\ImageProcessing4thYearProject\CascadeSetup\data\neg\neg-4872.jpg
 E:\workspace\ImageProcessing4thYearProject\CascadeSetup\data\neg\neg-4873.jpg
 E:\workspace\ImageProcessing4thYearProject\CascadeSetup\data\neg\neg-4874.jpg
 E:\workspace\ImageProcessing4thYearProject\CascadeSetup\data\neg\neg-4875.jpg
-E:\workspace\ImageProcessing4thYearProject\CascadeSetup\data\neg\Thumbs.db
 E:\workspace\ImageProcessing4thYearProject\CascadeSetup\data\neg\UMD_001.jpg
 E:\workspace\ImageProcessing4thYearProject\CascadeSetup\data\neg\UMD_002.jpg
 E:\workspace\ImageProcessing4thYearProject\CascadeSetup\data\neg\UMD_003.jpg
