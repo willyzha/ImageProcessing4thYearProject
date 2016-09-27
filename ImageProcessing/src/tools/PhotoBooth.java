@@ -28,9 +28,11 @@ import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
 import org.opencv.objdetect.CascadeClassifier;
 
-import webcamCaptureGui.WebcamGui;
-
 public class PhotoBooth extends JFrame implements ActionListener, WindowListener{
+	/**
+	 * serialVersionUID
+	 */
+	private static final long serialVersionUID = -7535672911057861331L;
 	private JLabel videoFrame;
 	private JButton snap;
 	private JTextField fileName;
@@ -40,7 +42,6 @@ public class PhotoBooth extends JFrame implements ActionListener, WindowListener
 	
 	private static final int WEBCAM_PX_WIDTH = 640;
 	private static final int WEBCAM_PX_HEIGHT =  480;
-	private boolean open = true;
 	private WebcamThread webcam;
 
 	private class WebcamThread extends Thread {
@@ -56,7 +57,9 @@ public class PhotoBooth extends JFrame implements ActionListener, WindowListener
 		}
 		
 		public void run() {
-			while (open && isVisible()) {
+			capture.open(0);
+			
+			while (true && isVisible()) {				
 				capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
 				capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
 				
@@ -74,21 +77,23 @@ public class PhotoBooth extends JFrame implements ActionListener, WindowListener
 					ImageIcon frame = new ImageIcon(bufferedImage(markedupImage));
 					videoFrame.setIcon(frame);
 					
-				}	  
-
-
+				} else {
+					System.out.println("NOT READY");
+				}
+				
 			}
+			capture.release();
 		}
 	}
 	
 	public PhotoBooth() {
-		setTitle("Webcam");
+		setTitle("PhotoBooth");
 		imgCounter = 0;
 		GridBagConstraints c = new GridBagConstraints();
 		c.fill = GridBagConstraints.HORIZONTAL;
 		
 		setLayout(new GridBagLayout());
-		setSize(new Dimension(WEBCAM_PX_WIDTH+16, WEBCAM_PX_HEIGHT+50));
+		setSize(new Dimension(WEBCAM_PX_WIDTH+16, WEBCAM_PX_HEIGHT+66));
 		
 		addWindowListener(this);
 		
@@ -114,9 +119,7 @@ public class PhotoBooth extends JFrame implements ActionListener, WindowListener
 		bottom.add(snap);
 		bottom.add(fileName);
 		
-		add(bottom, c);
-		capture.open(0);
-		
+		add(bottom, c);		
 		webcam = new WebcamThread();
 		
 		setVisible(true);
@@ -177,10 +180,10 @@ public class PhotoBooth extends JFrame implements ActionListener, WindowListener
 
 	@Override
 	public void windowClosing(WindowEvent arg0) {
-		open = false;
+		setVisible(false);
 		
 		while(webcam.isAlive()) {
-			
+			// Wait for webcam thread to terminate before closing main thread
 		}
 			
 		capture.release();

@@ -2,6 +2,8 @@ package webcamCaptureGui;
 
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 
@@ -20,29 +22,32 @@ import org.opencv.highgui.VideoCapture;
 import org.opencv.objdetect.CascadeClassifier;
 
 
-public class WebcamGui extends JFrame{
+public class WebcamGui extends JFrame implements WindowListener{
 
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 3732418556012706424L;
 	private static final int WEBCAM_PX_WIDTH = 640;
 	private static final int WEBCAM_PX_HEIGHT =  480;
 
 	private JLabel videoFrame;
+	private Thread webcam;
 	
 	public WebcamGui() {
 		setTitle("Webcam");
-		int width = 1280;
-		int height = 720;
-		setSize(new Dimension(width, height));
-		setVisible(true);
+		setSize(new Dimension(WEBCAM_PX_WIDTH+16, WEBCAM_PX_HEIGHT+39));
+		
+		addWindowListener(this);
 		
 		setLayout(new GridBagLayout());
-		
+
 		videoFrame = new JLabel();
+		videoFrame.setSize(WEBCAM_PX_WIDTH, WEBCAM_PX_HEIGHT);
 		add(videoFrame);
+		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		setVisible(true);
 	}
 
 	public void webcamCapture() {
-		Thread webcam = new Thread() {
+		webcam = new Thread() {
 			public void run() {
 				VideoCapture capture = new VideoCapture(0);
 
@@ -52,30 +57,24 @@ public class WebcamGui extends JFrame{
 				
 				Mat image = new Mat();
 				capture.read(image);
-				String filename = "webcamOut.png";
-				Highgui.imwrite(filename, image);
 								
 				while (true && isVisible()) {			
 					if (capture.read(image)) {
 						System.out.println("Sucessful");
+						CascadeClassifier circleDetector = new CascadeClassifier("cascade.xml");
 
-					}	  
-			
-					CascadeClassifier circleDetector = new CascadeClassifier("cascade.xml");
-
-					MatOfRect detections = new MatOfRect();
-					circleDetector.detectMultiScale(image, detections);
-					
-					for (Rect rect : detections.toArray()) {
-						Core.rectangle(image, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
+						MatOfRect detections = new MatOfRect();
+						circleDetector.detectMultiScale(image, detections);
+						
+						for (Rect rect : detections.toArray()) {
+							Core.rectangle(image, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
+						}
+						
+						ImageIcon frame = new ImageIcon(bufferedImage(image));
+						videoFrame.setIcon(frame);
+					} else {
+						System.out.println("Dropped Frame");
 					}
-					
-					ImageIcon frame = new ImageIcon(bufferedImage(image));
-					System.out.println("START");
-
-					videoFrame.setIcon(frame);
-				    System.out.println("FINISH");
-
 				}
 				capture.release();
 			}
@@ -96,9 +95,56 @@ public class WebcamGui extends JFrame{
 	
 	public static void main(String[] args) {
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-		// TODO Auto-generated method stub
+
 		WebcamGui gui = new WebcamGui();
 		gui.webcamCapture();
+	}
+
+	@Override
+	public void windowActivated(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowClosed(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowClosing(WindowEvent arg0) {
+		setVisible(false);
+		
+		while(webcam.isAlive()) {
+			// Wait for webcam thread to terminate before closing main thread
+		}
+	
+		System.out.println("Closing");
+	}
+
+	@Override
+	public void windowDeactivated(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowDeiconified(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowIconified(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowOpened(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }
