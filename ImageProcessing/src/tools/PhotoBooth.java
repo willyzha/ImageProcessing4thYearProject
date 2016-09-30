@@ -136,8 +136,6 @@ public class PhotoBooth extends JFrame implements ActionListener, WindowListener
 
 	}
 	
-	
-	
 	public static BufferedImage bufferedImage(Mat m) {
 	    int type = BufferedImage.TYPE_BYTE_GRAY;
 	    if ( m.channels() > 1 ) {

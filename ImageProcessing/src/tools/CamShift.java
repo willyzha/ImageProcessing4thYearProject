@@ -7,7 +7,9 @@ import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfInt;
+import org.opencv.core.Point;
 import org.opencv.core.Rect;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.TermCriteria;
 import org.opencv.highgui.Highgui;
@@ -30,7 +32,7 @@ public class CamShift {
 		Mat inputImage = Highgui.imread("stock.jpg");
 		Highgui.imwrite("input.png", inputImage);
 		
-		Mat roi = inputImage.adjustROI(400,250,125,90);
+		Mat roi = inputImage.submat(new Rect(240, 30, 140, 140));
 		Highgui.imwrite("roi.png", roi);
 		
 		Mat hsvImg_ROI = new Mat();			
@@ -58,6 +60,7 @@ public class CamShift {
 		
 		Core.normalize(roi_hist, roi_hist, 0, 255, Core.NORM_MINMAX);
 		
+		TermCriteria criteria = new TermCriteria(TermCriteria.COUNT + TermCriteria.EPS, 10, 1);
 		// *********************** //
 		Mat hsv = new Mat();
 		Mat dst = new Mat();
@@ -66,14 +69,30 @@ public class CamShift {
 		hsv_list.add(hsv);
 		Imgproc.calcBackProject(hsv_list, channels, roi_hist, dst, ranges, 1);
 		
-		Rect trackWindow = new Rect();
+		Highgui.imwrite("dst.png", dst);
 		
-		TermCriteria criteria = new TermCriteria(TermCriteria.COUNT + TermCriteria.EPS, 10, 1);
+		Rect trackWindow = new Rect(240, 30, 140, 140);
 		
-		Video.CamShift(dst, trackWindow, criteria);
+		Mat outputImage1 = inputImage.clone();	
+		Core.rectangle(outputImage1, 
+				new Point(trackWindow.x, trackWindow.y), 
+				new Point(trackWindow.x + trackWindow.width, trackWindow.y + trackWindow.height),
+				new Scalar(0, 255, 0));
+		Highgui.imwrite("outputImage1.png", outputImage1);
 		
+
 		
+		RotatedRect newWindow = Video.CamShift(dst, trackWindow, criteria);
 		
+		Mat markedupImage = inputImage.clone();	
+		
+		Core.rectangle(markedupImage, 
+				new Point(newWindow.boundingRect().x, newWindow.boundingRect().y), 
+				new Point(newWindow.boundingRect().x + newWindow.boundingRect().width, 
+						newWindow.boundingRect().y + newWindow.boundingRect().height),
+				new Scalar(0, 255, 0));
+		
+		Highgui.imwrite("markedupImage.png", markedupImage);
 		//ArrayList<Mat> hsvImgList = new ArrayList<Mat>();
 		//hsvImgList.add(hsvImg_ROI);
 					
