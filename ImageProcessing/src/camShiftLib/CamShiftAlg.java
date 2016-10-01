@@ -32,15 +32,16 @@ public class CamShiftAlg {
 		trackWindow = null;
 	}
 	
-	public void setup(Mat image, Rect startRect) {
+	public void setup(Mat image, Rect startRect, Scalar lowerb) {
 		
 		trackWindow = startRect;
 		
 		Mat hsvImg_ROI = new Mat();
 		Mat roi = image.submat(startRect);
+		
 		Imgproc.cvtColor(roi, hsvImg_ROI, Imgproc.COLOR_BGR2HSV);
 		
-		Scalar lowerb = new Scalar(0, 60, 32);
+		//Scalar lowerb = new Scalar(0, 60, 32);
 		Scalar upperb = new Scalar(180, 255, 255);
 		
 		Mat mask = new Mat();
@@ -59,6 +60,17 @@ public class CamShiftAlg {
 		Core.normalize(roi_hist, roi_hist, 0, 255, Core.NORM_MINMAX);
 		
 		setupComplete = true;
+	}
+	
+	public static Mat getMask(Mat image, Scalar lowerb) {
+		Mat hsvImg = new Mat();
+		Imgproc.cvtColor(image, hsvImg, Imgproc.COLOR_BGR2HSV);
+		
+		Scalar upperb = new Scalar(180, 255, 255);
+		
+		Mat mask = new Mat();
+		Core.inRange(hsvImg, lowerb, upperb, mask);
+		return mask;
 	}
 	
 	public RotatedRect calcShiftedRect(Mat image) {

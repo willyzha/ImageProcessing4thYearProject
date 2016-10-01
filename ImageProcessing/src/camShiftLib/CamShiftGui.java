@@ -20,13 +20,15 @@ import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
+import org.opencv.core.Scalar;
 
-public class CamShiftGui extends JFrame implements ActionListener, WebcamListener, WindowListener, DocumentListener{
+public class CamShiftGui extends JFrame implements ActionListener, WebcamListener, WindowListener, DocumentListener, ConfigurationListener{
 
 	private static final long serialVersionUID = 2028612532446093868L;
 	
 	private JLabel videoIcon;
 	private JButton startButton;
+	private JButton configureButton;
 	private JLabel x;
 	private JLabel y;
 	private JLabel width;
@@ -35,6 +37,9 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 	private JTextField yTextField;
 	private JTextField widthTextField;
 	private JTextField heightTextField;
+	
+	private ConfigurationGui configWindow;
+	private Scalar lowerb;
 	
 	private WebcamManager webcam;
 	private Rect rectangle;
@@ -88,8 +93,8 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 		
 		x = new JLabel("X: ");
 		y = new JLabel("Y: ");
-		width = new JLabel("Width: ");
-		height = new JLabel("Height: ");
+		width = new JLabel("W: ");
+		height = new JLabel("H: ");
 		
 		c.gridwidth = 1;
 		c.gridy = 1;
@@ -115,11 +120,24 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 		startButton = new JButton("Start");
 		startButton.setActionCommand("StartTracking");
 		startButton.addActionListener(this);
-		c.gridwidth = 8;
+		c.gridwidth = 4;
 		c.gridy = 2;
 		c.gridx = 0;
-		c.weightx = 1;
+		c.weightx = 0.5;
 		add(startButton, c);
+		
+		configureButton = new JButton("Configure");
+		configureButton.setActionCommand("Configure");
+		configureButton.addActionListener(this);
+		c.gridwidth = 4;
+		c.gridy = 2;
+		c.gridx = 4;
+		c.weightx = 0.5;
+		add(configureButton, c);
+		
+		configWindow = new ConfigurationGui();
+		configWindow.addConfigurationListener(this);
+		lowerb = new Scalar(0, 0, 0);
 		
 		pack();
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -135,8 +153,8 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		if(e.getActionCommand().equals("StartTracking")) {
-			if (lastFrameReceived != null) {
-				camShiftAlg.setup(lastFrameReceived, rectangle);
+			if (lastFrameReceived != null && rectangle.area() > 0) {
+				camShiftAlg.setup(lastFrameReceived, rectangle, lowerb);
 				
 				camShiftAlgEnabled = true;
 				
@@ -158,6 +176,9 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 			yTextField.setEditable(true);
 			heightTextField.setEditable(true);
 			widthTextField.setEditable(true);
+		} else if (e.getActionCommand().equals("Configure")) {
+			configWindow.setVisible();
+			
 		}
 	}
 	
@@ -169,6 +190,11 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 
 	@Override
 	public void receiveWebcamFrame(Mat aFrame) {
+		
+		if (configWindow.isVisible()) {
+			aFrame = CamShiftAlg.getMask(aFrame, lowerb);
+		}
+		
 		if (camShiftAlgEnabled) {
 			RotatedRect shiftedRect = camShiftAlg.calcShiftedRect(aFrame);
 			aFrame = CommonFunctions.drawRect(aFrame, shiftedRect);
@@ -258,5 +284,17 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 		} catch (NumberFormatException exception) {
 			rectangle = new Rect(0,0,0,0);
 		}
+	}
+
+	@Override
+	public void receiveConfiguration(int r, int b, int g) {
+		System.out.println("R: " + r + " B: " + b + " G: " + g);
+		lowerb = new Scalar(r, b, g);
+	}
+
+	@Override
+	public void endConfiguration() {
+		System.out.println("");
+		
 	}
 }
