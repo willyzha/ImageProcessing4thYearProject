@@ -22,7 +22,7 @@ import org.opencv.highgui.VideoCapture;
 import org.opencv.objdetect.CascadeClassifier;
 
 
-public class WebcamGui extends JFrame implements WindowListener{
+public class WebcamGui extends JFrame implements WindowListener {
 
 	private static final long serialVersionUID = 3732418556012706424L;
 	private static final int WEBCAM_PX_WIDTH = 640;
