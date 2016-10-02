@@ -40,6 +40,7 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 	
 	private ConfigurationGui configWindow;
 	private Scalar lowerb;
+	private Scalar upperb;
 	
 	private WebcamManager webcam;
 	private Rect rectangle;
@@ -138,6 +139,7 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 		configWindow = new ConfigurationGui();
 		configWindow.addConfigurationListener(this);
 		lowerb = new Scalar(0, 0, 0);
+		upperb = new Scalar(0, 0, 0);
 		
 		pack();
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -154,7 +156,7 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 	public void actionPerformed(ActionEvent e) {
 		if(e.getActionCommand().equals("StartTracking")) {
 			if (lastFrameReceived != null && rectangle.area() > 0) {
-				camShiftAlg.setup(lastFrameReceived, rectangle, lowerb);
+				camShiftAlg.setup(lastFrameReceived, rectangle, lowerb, upperb);
 				
 				camShiftAlgEnabled = true;
 				
@@ -192,11 +194,12 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 	public void receiveWebcamFrame(Mat aFrame) {
 		
 		if (configWindow.isVisible()) {
-			aFrame = CamShiftAlg.getMask(aFrame, lowerb);
+			aFrame = CamShiftAlg.getMask(aFrame, lowerb, upperb);
 		}
 		
 		if (camShiftAlgEnabled) {
-			RotatedRect shiftedRect = camShiftAlg.calcShiftedRect(aFrame);
+			//RotatedRect shiftedRect = camShiftAlg.calcCamShiftedRect(aFrame);
+			Rect shiftedRect = camShiftAlg.calcMeanShiftedRect(aFrame);
 			aFrame = CommonFunctions.drawRect(aFrame, shiftedRect);
 		} else {
 			lastFrameReceived = aFrame.clone();
@@ -287,9 +290,11 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 	}
 
 	@Override
-	public void receiveConfiguration(int r, int b, int g) {
-		System.out.println("R: " + r + " B: " + b + " G: " + g);
-		lowerb = new Scalar(r, b, g);
+	public void receiveConfiguration(Scalar aLowerb, Scalar aUpperb) {
+		System.out.println("Upperb: r:" + aUpperb.val[0] + " b: " + aUpperb.val[1] + " g: " + aUpperb.val[2]);
+		System.out.println("Lowerb: r:" + aLowerb.val[0] + " b: " + aLowerb.val[1] + " g: " + aLowerb.val[2]);
+		lowerb = aLowerb;
+		upperb = aUpperb;
 	}
 
 	@Override

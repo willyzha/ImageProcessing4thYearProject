@@ -7,8 +7,8 @@ import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
 
 public class WebcamManager{
-	public static final int WEBCAM_PX_WIDTH = 640;
-	public static final int WEBCAM_PX_HEIGHT =  480;
+	public static final int WEBCAM_PX_WIDTH = 1280;
+	public static final int WEBCAM_PX_HEIGHT =  720;
 	
 	private VideoCapture capture;
 	private int deviceId;
@@ -19,11 +19,11 @@ public class WebcamManager{
 	public WebcamManager(int aDeviceId) {
 		capture = new VideoCapture(aDeviceId);
 		deviceId = aDeviceId;
+			
+		capture.open(deviceId);
 		
 		capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
 		capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
-		
-		capture.open(deviceId);
 		
 		webcamListeners = new ArrayList<WebcamListener>();
 	}
