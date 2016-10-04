@@ -7,8 +7,8 @@ import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
 
 public class WebcamManager{
-	public static final int WEBCAM_PX_WIDTH = 1280;
-	public static final int WEBCAM_PX_HEIGHT =  720;
+	public static final int WEBCAM_PX_WIDTH = 680;
+	public static final int WEBCAM_PX_HEIGHT =  420;
 	
 	private VideoCapture capture;
 	private int deviceId;

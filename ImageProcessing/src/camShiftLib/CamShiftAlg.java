@@ -26,6 +26,7 @@ public class CamShiftAlg {
     private boolean setupComplete;
     private TermCriteria criteria;
     private Rect trackWindow;
+    MatOfInt histSize;
 	
 	public CamShiftAlg() {
 		channels = new MatOfInt(0);
@@ -33,6 +34,7 @@ public class CamShiftAlg {
 		setupComplete = false;
 		criteria = new TermCriteria(TermCriteria.COUNT + TermCriteria.EPS, 10, 1);
 		trackWindow = null;
+		histSize = new MatOfInt(16);	
 	}
 	
 	public void setup(Mat image, Rect startRect, Scalar lowerb, Scalar upperb) {
@@ -50,14 +52,12 @@ public class CamShiftAlg {
 		Mat mask = new Mat();
 		Core.inRange(hsvImg_ROI, lowerb, upperb, mask);
 
-		Mat K = new Mat(new Size(3,3), CvType.CV_8UC1, new Scalar(1));
-		Imgproc.erode(mask, mask, K);
-		Imgproc.dilate(mask, mask, K);
+		Mat K = new Mat(new Size(2,2), CvType.CV_8UC1, new Scalar(1));
+//		Imgproc.erode(mask, mask, K);
+//		Imgproc.dilate(mask, mask, K);
 		
 		Highgui.imwrite("mask.jpg", mask);
-		Highgui.imwrite("roi.jpg", hsvImg_ROI);
-		
-	    MatOfInt histSize = new MatOfInt(180);		    
+		Highgui.imwrite("roi.jpg", hsvImg_ROI);	    
 
 	    List<Mat> hsvImg_ROI_List = new ArrayList<Mat>();
 	    roi_hist = new Mat();
@@ -78,17 +78,50 @@ public class CamShiftAlg {
 		Mat mask = new Mat();
 		Core.inRange(hsvImg, lowerb, upperb, mask);
 		
-		Mat K = new Mat(new Size(3,3), CvType.CV_8UC1, new Scalar(1));
+		Mat K = new Mat(new Size(2,2), CvType.CV_8UC1, new Scalar(1));
 		
 		//System.out.println(K.toString());
 		
-		Imgproc.erode(mask, mask, K);
-		Imgproc.dilate(mask, mask, K);
+//		Imgproc.erode(mask, mask, K);
+//		Imgproc.dilate(mask, mask, K);
 		
 		return mask;
 	}
 	
-	public RotatedRect calcCamShiftedRect(Mat image) {
+	public Mat getHistogramBackProject(Mat image) {
+		Mat hsv = new Mat();
+		Mat dst = new Mat();
+		
+		Imgproc.cvtColor(image, hsv, Imgproc.COLOR_BGR2HSV);
+		List<Mat> hsv_list = new ArrayList<Mat>();
+		hsv_list.add(hsv);
+		
+		Imgproc.calcBackProject(hsv_list, channels, roi_hist, dst, ranges, 1);
+		return dst;
+	}
+	
+	public static Mat getHueSpace(Mat image) {
+		Mat hsv = new Mat();
+		Mat H = new Mat();
+		Mat S = new Mat();
+		Mat V = new Mat();
+		ArrayList<Mat> channels = new ArrayList<Mat>();
+		channels.add(H);
+		channels.add(S);
+		channels.add(V);
+		Imgproc.cvtColor(image, hsv, Imgproc.COLOR_BGR2HSV);
+		System.out.println("Dims: " + hsv.dims());
+		Core.split(hsv, channels);
+		
+		channels.get(1).setTo(new Scalar(0));
+		channels.get(2).setTo(new Scalar(0));
+		
+		Core.merge(channels, hsv);
+		
+		return hsv;
+	}
+	
+	public Rect calcCamShiftedRect(Mat image) {
 		Mat hsv = new Mat();
 		Mat dst = new Mat();
 		
@@ -99,9 +132,16 @@ public class CamShiftAlg {
 		
 		Highgui.imwrite("backProject.jpg", dst);
 		
+		Rect tempTrackWindow = trackWindow.clone();
+		
 		RotatedRect newWindow = Video.CamShift(dst, trackWindow, criteria);
-		trackWindow = newWindow.boundingRect();
-		return newWindow;
+		//trackWindow = newWindow.boundingRect();
+		
+		if (trackWindow.area() == 0) {
+			trackWindow = tempTrackWindow;
+		}
+		
+		return trackWindow;
 	}
 	
 	public Rect calcMeanShiftedRect(Mat image) {

@@ -10,6 +10,7 @@ import java.awt.event.WindowListener;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
@@ -37,6 +38,7 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 	private JTextField yTextField;
 	private JTextField widthTextField;
 	private JTextField heightTextField;
+	private JComboBox<String> videoSelection;
 	
 	private ConfigurationGui configWindow;
 	private Scalar lowerb;
@@ -57,7 +59,7 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 		
 		addWindowListener(this);
 		
-		rectangle = new Rect(0,0,0,0);
+		rectangle = new Rect(100,100,100,100);
 		camShiftAlgEnabled = false;
 		camShiftAlg = new CamShiftAlg();
 		lastFrameReceived = null;
@@ -141,6 +143,18 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 		lowerb = new Scalar(0, 0, 0);
 		upperb = new Scalar(0, 0, 0);
 		
+		videoSelection = new JComboBox<String>();
+		videoSelection.addItem("Normal");
+		videoSelection.addItem("Back Projection");
+		videoSelection.addItem("Mask");
+		videoSelection.addItem("Hue");
+		videoSelection.addActionListener(this);
+		c.gridwidth = 8;
+		c.gridy = 3;
+		c.gridx = 0;
+		c.weightx = 1;
+		add(videoSelection, c);
+		
 		pack();
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setVisible(true);
@@ -193,18 +207,32 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 	@Override
 	public void receiveWebcamFrame(Mat aFrame) {
 		
-		if (configWindow.isVisible()) {
-			aFrame = CamShiftAlg.getMask(aFrame, lowerb, upperb);
-		}
+//		if (configWindow.isVisible()) {
+//			aFrame = CamShiftAlg.getMask(aFrame, lowerb, upperb);
+//		}
 		
 		if (camShiftAlgEnabled) {
-			//RotatedRect shiftedRect = camShiftAlg.calcCamShiftedRect(aFrame);
-			Rect shiftedRect = camShiftAlg.calcMeanShiftedRect(aFrame);
-			aFrame = CommonFunctions.drawRect(aFrame, shiftedRect);
+			rectangle = camShiftAlg.calcCamShiftedRect(aFrame);
+			//Rect shiftedRect = camShiftAlg.calcMeanShiftedRect(aFrame);
+			
+			//aFrame = camShiftAlg.getHistogramBackProject(aFrame);
+			
+			//aFrame = CommonFunctions.drawRect(aFrame, shiftedRect);
 		} else {
 			lastFrameReceived = aFrame.clone();
-			aFrame = CommonFunctions.drawRect(aFrame, rectangle);
-		}		
+		}
+		
+		if (videoSelection.getSelectedItem().toString().equals("Normal")) {
+			
+		} else if (videoSelection.getSelectedItem().toString().equals("Back Projection")) {
+			aFrame = camShiftAlg.getHistogramBackProject(aFrame);
+		} else if (videoSelection.getSelectedItem().toString().equals("Mask")) {
+			aFrame = CamShiftAlg.getMask(aFrame, lowerb, upperb);
+		} else if (videoSelection.getSelectedItem().toString().equals("Hue")) {
+			aFrame = CamShiftAlg.getHueSpace(aFrame);
+		}
+		
+		aFrame = CommonFunctions.drawRect(aFrame, rectangle);
 		ImageIcon frame = new ImageIcon(CommonFunctions.bufferedImage(aFrame));
 		
 		videoIcon.setIcon(frame);
@@ -295,8 +323,11 @@ public class CamShiftGui extends JFrame implements ActionListener, WebcamListene
 		System.out.println("Lowerb: r:" + aLowerb.val[0] + " b: " + aLowerb.val[1] + " g: " + aLowerb.val[2]);
 		lowerb = aLowerb;
 		upperb = aUpperb;
+		if (rectangle.area() > 0) {
+			camShiftAlg.setup(lastFrameReceived, rectangle, lowerb, upperb);
+			System.out.println("Update Histogram");
+		}
 	}
-
 	@Override
 	public void endConfiguration() {
 		System.out.println("");
