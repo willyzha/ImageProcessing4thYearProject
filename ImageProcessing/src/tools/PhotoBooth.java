@@ -24,8 +24,10 @@ import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
-import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.videoio.VideoCapture;
+import org.opencv.videoio.Videoio;
 import org.opencv.objdetect.CascadeClassifier;
 
 public class PhotoBooth extends JFrame implements ActionListener, WindowListener{
@@ -57,11 +59,11 @@ public class PhotoBooth extends JFrame implements ActionListener, WindowListener
 		}
 		
 		public void run() {
-			capture.open(0);
+			//capture.open(0);
 			
 			while (true && isVisible()) {				
-				capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
-				capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
+				capture.set(Videoio.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
+				capture.set(Videoio.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
 				
 				if (capture.read(image)) {
 					CascadeClassifier detector = new CascadeClassifier("cascade.xml");
@@ -71,7 +73,7 @@ public class PhotoBooth extends JFrame implements ActionListener, WindowListener
 					
 					Mat markedupImage = image.clone();					
 					for (Rect rect : detections.toArray()) {
-						Core.rectangle(markedupImage, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
+						Imgproc.rectangle(markedupImage, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
 					}
 					
 					ImageIcon frame = new ImageIcon(bufferedImage(markedupImage));
@@ -130,7 +132,7 @@ public class PhotoBooth extends JFrame implements ActionListener, WindowListener
 	public void save() {
 
 		String filename = "photoBooth\\webcamOut_"+imgCounter+".png";
-		Highgui.imwrite(filename, webcam.getImage());
+		Imgcodecs.imwrite(filename, webcam.getImage());
 		
 		System.out.println("FINISH");
 

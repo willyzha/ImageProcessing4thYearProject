@@ -3,12 +3,12 @@ package camShiftLib;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 
-import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
 
 public class CommonFunctions {
 	
@@ -24,7 +24,7 @@ public class CommonFunctions {
 	
 	public static Mat drawRect(Mat m, Rect rect) {
 		Mat markedupImage = m.clone();
-		Core.rectangle(markedupImage, 
+		Imgproc.rectangle(markedupImage, 
 				new Point(rect.x, rect.y), 
 				new Point(rect.x + rect.width, rect.y + rect.height),
 				new Scalar(0, 255, 0));
@@ -38,13 +38,13 @@ public class CommonFunctions {
 		
 		Scalar color = new Scalar(0, 255, 0);
 		
-		Core.line(markedupImage, 
+		Imgproc.line(markedupImage, 
 				pt[0], pt[1], color);
-		Core.line(markedupImage, 
+		Imgproc.line(markedupImage, 
 				pt[1], pt[2], color);
-		Core.line(markedupImage, 
+		Imgproc.line(markedupImage, 
 				pt[2], pt[3], color);
-		Core.line(markedupImage, 
+		Imgproc.line(markedupImage, 
 				pt[3], pt[0], color);
 		
 		return markedupImage;

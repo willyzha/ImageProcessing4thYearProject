@@ -3,6 +3,8 @@ package camShiftLib;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.imageio.ImageWriter;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -13,8 +15,7 @@ import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
-import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.video.Video;
 
@@ -56,8 +57,8 @@ public class CamShiftAlg {
 //		Imgproc.erode(mask, mask, K);
 //		Imgproc.dilate(mask, mask, K);
 		
-		Highgui.imwrite("mask.jpg", mask);
-		Highgui.imwrite("roi.jpg", hsvImg_ROI);	    
+		Imgcodecs.imwrite("mask.jpg", mask);
+		Imgcodecs.imwrite("roi.jpg", hsvImg_ROI);	    
 
 	    List<Mat> hsvImg_ROI_List = new ArrayList<Mat>();
 	    roi_hist = new Mat();
@@ -130,7 +131,7 @@ public class CamShiftAlg {
 		hsv_list.add(hsv);
 		Imgproc.calcBackProject(hsv_list, channels, roi_hist, dst, ranges, 1);
 		
-		Highgui.imwrite("backProject.jpg", dst);
+		Imgcodecs.imwrite("backProject.jpg", dst);
 		
 		Rect tempTrackWindow = trackWindow.clone();
 		
@@ -152,7 +153,7 @@ public class CamShiftAlg {
 		List<Mat> hsv_list = new ArrayList<Mat>();
 		hsv_list.add(hsv);
 		Imgproc.calcBackProject(hsv_list, channels, roi_hist, dst, ranges, 1);
-		Highgui.imwrite("backProject.jpg", dst);
+		Imgcodecs.imwrite("backProject.jpg", dst);
 		
 		Video.meanShift(dst, trackWindow, criteria);
 		

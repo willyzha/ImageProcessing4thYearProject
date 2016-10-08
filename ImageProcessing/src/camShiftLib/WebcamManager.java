@@ -1,10 +1,9 @@
 package camShiftLib;
 
 import java.util.ArrayList;
-
+import org.opencv.videoio.VideoCapture;
+import org.opencv.videoio.Videoio;
 import org.opencv.core.Mat;
-import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
 
 public class WebcamManager{
 	public static final int WEBCAM_PX_WIDTH = 680;
@@ -17,13 +16,10 @@ public class WebcamManager{
 	private boolean start;
 	
 	public WebcamManager(int aDeviceId) {
-		capture = new VideoCapture(aDeviceId);
 		deviceId = aDeviceId;
-			
-		capture.open(deviceId);
-		
-		capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
-		capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
+		capture = new VideoCapture(deviceId);
+		capture.set(Videoio.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
+		capture.set(Videoio.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
 		
 		webcamListeners = new ArrayList<WebcamListener>();
 	}

@@ -17,8 +17,9 @@ import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
-import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.videoio.VideoCapture;
+import org.opencv.videoio.Videoio;
 import org.opencv.objdetect.CascadeClassifier;
 
 
@@ -50,15 +51,15 @@ public class WebcamGui extends JFrame implements WindowListener {
 		webcam = new Thread() {
 			public void run() {
 				VideoCapture capture = new VideoCapture(0);
-
-				capture.open(0);
-				capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
-				capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
+				capture.set(Videoio.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
+				capture.set(Videoio.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
 				
+				//capture.open(0);
+
 				Mat image = new Mat();
 				capture.read(image);
 								
-				while (true && isVisible()) {			
+				while (true && isVisible()) {		
 					if (capture.read(image)) {
 						System.out.println("Sucessful");
 						CascadeClassifier circleDetector = new CascadeClassifier("cascade.xml");
@@ -67,7 +68,7 @@ public class WebcamGui extends JFrame implements WindowListener {
 						circleDetector.detectMultiScale(image, detections);
 						
 						for (Rect rect : detections.toArray()) {
-							Core.rectangle(image, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
+							Imgproc.rectangle(image, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
 						}
 						
 						ImageIcon frame = new ImageIcon(bufferedImage(image));

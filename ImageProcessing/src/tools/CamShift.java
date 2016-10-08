@@ -12,8 +12,9 @@ import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.TermCriteria;
-import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.videoio.VideoCapture;
+import org.opencv.videoio.Videoio;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.video.Video;
 
@@ -24,27 +25,27 @@ public class CamShift {
 
 	public CamShift() {
 		capture = new VideoCapture(0);
-		capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
-		capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
+		capture.set(Videoio.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
+		capture.set(Videoio.CV_CAP_PROP_FRAME_WIDTH, WEBCAM_PX_WIDTH);
 	}
 	
 	public void run() {	
-		Mat inputImage = Highgui.imread("stock.jpg");
-		Highgui.imwrite("input.png", inputImage);
+		Mat inputImage = Imgcodecs.imread("stock.jpg");
+		Imgcodecs.imwrite("input.png", inputImage);
 		
 		Mat roi = inputImage.submat(new Rect(240, 30, 140, 140));
-		Highgui.imwrite("roi.png", roi);
+		Imgcodecs.imwrite("roi.png", roi);
 		
 		Mat hsvImg_ROI = new Mat();			
 		Imgproc.cvtColor(roi, hsvImg_ROI, Imgproc.COLOR_BGR2HSV);
-		Highgui.imwrite("hsvImg_ROI.png", hsvImg_ROI);
+		Imgcodecs.imwrite("hsvImg_ROI.png", hsvImg_ROI);
 		
 		Scalar lowerb = new Scalar(0, 60, 32);
 		Scalar upperb = new Scalar(180, 255, 255);
 		
 		Mat mask = new Mat();		
 		Core.inRange(hsvImg_ROI, lowerb, upperb, mask);
-		Highgui.imwrite("mask.png", mask);
+		Imgcodecs.imwrite("mask.png", mask);
 		
 	    int hbins = 30, sbins = 32;
 	    MatOfInt histSize = new MatOfInt(180);
@@ -54,7 +55,7 @@ public class CamShift {
 	    double sranges[] = { 0, 256 };
 	    //double ranges[][] = { hranges, sranges };
 	    MatOfFloat ranges = new MatOfFloat(0f, 180f);
-	    List<Mat> hsvImg_ROI_List = new ArrayList();
+	    List<Mat> hsvImg_ROI_List = new ArrayList<Mat>();
 	    hsvImg_ROI_List.add(hsvImg_ROI);
 		Imgproc.calcHist(hsvImg_ROI_List, channels, mask, roi_hist, histSize, ranges);
 		
@@ -69,16 +70,16 @@ public class CamShift {
 		hsv_list.add(hsv);
 		Imgproc.calcBackProject(hsv_list, channels, roi_hist, dst, ranges, 1);
 		
-		Highgui.imwrite("dst.png", dst);
+		Imgcodecs.imwrite("dst.png", dst);
 		
 		Rect trackWindow = new Rect(240, 30, 140, 140);
 		
 		Mat outputImage1 = inputImage.clone();	
-		Core.rectangle(outputImage1, 
+		Imgproc.rectangle(outputImage1, 
 				new Point(trackWindow.x, trackWindow.y), 
 				new Point(trackWindow.x + trackWindow.width, trackWindow.y + trackWindow.height),
 				new Scalar(0, 255, 0));
-		Highgui.imwrite("outputImage1.png", outputImage1);
+		Imgcodecs.imwrite("outputImage1.png", outputImage1);
 		
 
 		
@@ -86,13 +87,13 @@ public class CamShift {
 		
 		Mat markedupImage = inputImage.clone();	
 		
-		Core.rectangle(markedupImage, 
+		Imgproc.rectangle(markedupImage, 
 				new Point(newWindow.boundingRect().x, newWindow.boundingRect().y), 
 				new Point(newWindow.boundingRect().x + newWindow.boundingRect().width, 
 						newWindow.boundingRect().y + newWindow.boundingRect().height),
 				new Scalar(0, 255, 0));
 		
-		Highgui.imwrite("markedupImage.png", markedupImage);
+		Imgcodecs.imwrite("markedupImage.png", markedupImage);
 		//ArrayList<Mat> hsvImgList = new ArrayList<Mat>();
 		//hsvImgList.add(hsvImg_ROI);
 					
