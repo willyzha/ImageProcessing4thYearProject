@@ -3,17 +3,12 @@ package camShiftLib;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.imageio.ImageWriter;
-
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.Rect;
-import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
 import org.opencv.core.TermCriteria;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -24,7 +19,9 @@ public class CamShiftAlg {
 	private Mat roi_hist;
     private MatOfInt channels;
     private MatOfFloat ranges;
-    private boolean setupComplete;
+
+    @SuppressWarnings("unused")
+	private boolean setupComplete;
     private TermCriteria criteria;
     private Rect trackWindow;
     MatOfInt histSize;
@@ -53,7 +50,7 @@ public class CamShiftAlg {
 		Mat mask = new Mat();
 		Core.inRange(hsvImg_ROI, lowerb, upperb, mask);
 
-		Mat K = new Mat(new Size(2,2), CvType.CV_8UC1, new Scalar(1));
+//		Mat K = new Mat(new Size(2,2), CvType.CV_8UC1, new Scalar(1));
 //		Imgproc.erode(mask, mask, K);
 //		Imgproc.dilate(mask, mask, K);
 		
@@ -79,7 +76,7 @@ public class CamShiftAlg {
 		Mat mask = new Mat();
 		Core.inRange(hsvImg, lowerb, upperb, mask);
 		
-		Mat K = new Mat(new Size(2,2), CvType.CV_8UC1, new Scalar(1));
+//		Mat K = new Mat(new Size(2,2), CvType.CV_8UC1, new Scalar(1));
 		
 		//System.out.println(K.toString());
 		
@@ -135,7 +132,7 @@ public class CamShiftAlg {
 		
 		Rect tempTrackWindow = trackWindow.clone();
 		
-		RotatedRect newWindow = Video.CamShift(dst, trackWindow, criteria);
+		/*RotatedRect newWindow = */Video.CamShift(dst, trackWindow, criteria);
 		//trackWindow = newWindow.boundingRect();
 		
 		if (trackWindow.area() == 0) {

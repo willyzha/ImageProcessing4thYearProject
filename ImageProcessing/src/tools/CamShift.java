@@ -47,12 +47,12 @@ public class CamShift {
 		Core.inRange(hsvImg_ROI, lowerb, upperb, mask);
 		Imgcodecs.imwrite("mask.png", mask);
 		
-	    int hbins = 30, sbins = 32;
+//	    int hbins = 30, sbins = 32;
 	    MatOfInt histSize = new MatOfInt(180);
 	    Mat roi_hist = new Mat();
 	    MatOfInt channels = new MatOfInt(0);
-	    double hranges[] = { 0, 180 };
-	    double sranges[] = { 0, 256 };
+//	    double hranges[] = { 0, 180 };
+//	    double sranges[] = { 0, 256 };
 	    //double ranges[][] = { hranges, sranges };
 	    MatOfFloat ranges = new MatOfFloat(0f, 180f);
 	    List<Mat> hsvImg_ROI_List = new ArrayList<Mat>();

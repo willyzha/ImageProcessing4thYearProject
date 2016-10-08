@@ -20,7 +20,6 @@ import javax.swing.event.DocumentListener;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
-import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 
 public class CamShiftGui extends JFrame implements ActionListener, WebcamListener, WindowListener, DocumentListener, ConfigurationListener{
