@@ -1,4 +1,2 @@
-/camShiftLib/
 /tools/
-/test/
-/webcamCaptureGui/
+*.class

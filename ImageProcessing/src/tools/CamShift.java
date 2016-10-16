@@ -22,7 +22,7 @@ public class CamShift {
 	VideoCapture capture;
 	private static final int WEBCAM_PX_WIDTH = 640;
 	private static final int WEBCAM_PX_HEIGHT =  480;
-
+	
 	public CamShift() {
 		capture = new VideoCapture(0);
 		capture.set(Videoio.CV_CAP_PROP_FRAME_HEIGHT, WEBCAM_PX_HEIGHT);
