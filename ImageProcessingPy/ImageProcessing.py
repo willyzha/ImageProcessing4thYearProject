@@ -26,6 +26,19 @@ def selectROI(event, x, y, flags, param):
         cv2.circle(frame, (x, y), 4, (0, 255, 0), 2)
         cv2.imshow("frame", frame)
 
+def getHSVMask(frame, lowerb, upperb):
+    if lowerb[0] < upperb[0]:
+        return cv2.inRange(frame, lowerb, upperb)
+    else:
+        temp = upperb
+        temp[0] = 255
+        mask1 = cv2.inRange(frame, lowerb, temp)
+        temp = lowerb
+        temp[0] = 0
+        mask2 = cv2.inRange(frame, temp, upperb)
+        return cv2.bitwise_or(mask1, mask2)
+        
+
 def main():
     # construct the argument parse and parse the arguments
     ap = argparse.ArgumentParser()
@@ -55,6 +68,9 @@ def main():
     termination = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
     roiBox = None
 
+    lowerb = np.array([231,124,25])
+    upperb = np.array([18,255,255])
+
     # keep looping over the frames
     while True:
         # grab the current frame
@@ -72,9 +88,7 @@ def main():
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             
             # Mask to remove the low S and V values (white & black)
-            lowerb = np.array([0,70,50])
-            upperb = np.array([255,255,255])
-            mask = cv2.inRange(hsv, lowerb, upperb)
+            mask = getHSVMask(hsv, lowerb, upperb)
             
             kernel = np.ones((5,5),np.uint8)
             mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN, kernel)
@@ -166,7 +180,8 @@ def main():
 
             # compute a HSV histogram for the ROI and store the
             # bounding box
-            roiHist = cv2.calcHist([roi], [0], None, [16], [0, 180])
+            mask  = getHSVMask(roi, lowerb, upperb)
+            roiHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
             roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
             print roiHist
             roiBox = (tl[0], tl[1], br[0], br[1])
