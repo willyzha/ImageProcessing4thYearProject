@@ -41,7 +41,6 @@ def main():
     # camera
     if not args.get("video", False):
         camera = cv2.VideoCapture(0)
-
     # otherwise, load the video
     else:
         camera = cv2.VideoCapture(args["video"])
@@ -71,16 +70,26 @@ def main():
             # convert the current frame to the HSV color space
             # and perform mean shift
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            
+            lowerb = np.array([0,80,50])
+            upperb = np.array([255,255,255])
+            mask = cv2.inRange(hsv, lowerb, upperb)
+            cv2.imshow("mask", mask)
+            
             backProj = cv2.calcBackProject([hsv], [0], roiHist, [0, 180], 1)
-
+            newBackProj = cv2.bitwise_and(backProj, mask)
             # apply cam shift to the back projection, convert the
             # points to a bounding box, and then draw them
-            (r, roiBox) = cv2.CamShift(backProj, roiBox, termination)
+            (r, roiBox) = cv2.CamShift(newBackProj, roiBox, termination)
             pts = np.int0(cv2.boxPoints(r))
             cv2.polylines(frame, [pts], True, (0, 255, 0), 2)
+            cv2.imshow("backProj", backProj)
+            cv2.imshow("newBackProj", newBackProj)
 
         # show the frame and record if the user presses a key
         cv2.imshow("frame", frame)
+        cv2.imwrite("frame.jpg", frame);
+        
         key = cv2.waitKey(1) & 0xFF
 
         # handle if the 'i' key is pressed, then go into ROI
@@ -114,6 +123,7 @@ def main():
             # bounding box
             roiHist = cv2.calcHist([roi], [0], None, [16], [0, 180])
             roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
+            print roiHist
             roiBox = (tl[0], tl[1], br[0], br[1])
 
         # if the 'q' key is pressed, stop the loop
