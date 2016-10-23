@@ -48,8 +48,22 @@ public class CamShiftAlg {
 		//Scalar upperb = new Scalar(180, 255, 255);
 		
 		Mat mask = new Mat();
-		Core.inRange(hsvImg_ROI, lowerb, upperb, mask);
+		
+		if (lowerb.val[0] < upperb.val[0]) {
+			Core.inRange(hsvImg_ROI, lowerb, upperb, mask);
+		} else {
+			Mat mask1 = new Mat();
+			Mat mask2 = new Mat();
 
+			Scalar temp = upperb.clone();
+			temp.val[0] = 255;
+			Core.inRange(hsvImg_ROI, lowerb, temp, mask2);
+			temp = lowerb.clone();
+			temp.val[0] = 0;
+			Core.inRange(hsvImg_ROI, temp, upperb, mask1);
+			Core.bitwise_or(mask1, mask2, mask);
+		}
+		
 //		Mat K = new Mat(new Size(2,2), CvType.CV_8UC1, new Scalar(1));
 //		Imgproc.erode(mask, mask, K);
 //		Imgproc.dilate(mask, mask, K);
@@ -61,8 +75,8 @@ public class CamShiftAlg {
 	    roi_hist = new Mat();
 	    hsvImg_ROI_List.add(hsvImg_ROI);
 		Imgproc.calcHist(hsvImg_ROI_List, channels, mask, roi_hist, histSize, ranges);
-		
-		Core.normalize(roi_hist, roi_hist, 0, 255, Core.NORM_MINMAX);
+ 
+		//Core.normalize(roi_hist, roi_hist, 0, 255, Core.NORM_MINMAX);
 		
 		setupComplete = true;
 	}
@@ -74,7 +88,20 @@ public class CamShiftAlg {
 		//Scalar upperb = new Scalar(180, 255, 255);
 		
 		Mat mask = new Mat();
-		Core.inRange(hsvImg, lowerb, upperb, mask);
+		if (lowerb.val[0] < upperb.val[0]) {
+			Core.inRange(image, lowerb, upperb, mask);
+		} else {
+			Mat mask1 = new Mat();
+			Mat mask2 = new Mat();
+
+			Scalar temp = upperb.clone();
+			temp.val[0] = 256;
+			Core.inRange(image, lowerb, temp, mask2);
+			temp = lowerb.clone();
+			temp.val[0] = 0;
+			Core.inRange(image, temp, upperb, mask1);
+			Core.bitwise_or(mask1, mask2, mask);
+		}
 		
 //		Mat K = new Mat(new Size(2,2), CvType.CV_8UC1, new Scalar(1));
 		
