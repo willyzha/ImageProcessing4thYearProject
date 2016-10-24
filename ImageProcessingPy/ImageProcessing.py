@@ -83,6 +83,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     return (r, aRoiBox)
 
 def main():
+    global roiPts, inputMode
     camera = cv2.VideoCapture(0)
 
     # setup the mouse callback
