@@ -80,9 +80,12 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
         cv2.imshow("roi",roi)   
         cv2.imwrite("newBackProj.jpg", newBackProj)
     
+        print center
+    
     return (r, aRoiBox)
 
 def main():
+    global roiPts, inputMode
     camera = cv2.VideoCapture(0)
 
     # setup the mouse callback
@@ -99,6 +102,7 @@ def main():
         # check to see if we have reached the end of the
         # video
         if not grabbed:
+            print "Could not read from camera exiting..."
             break
 
         # if the see if the ROI has been computed
@@ -150,6 +154,7 @@ def main():
             cv2.setMouseCallback("frame", selectROI, None)
         # if the 'q' key is pressed, stop the loop
         elif key == ord("q"):
+            print "Quitting"
             break
 
     # cleanup the camera and close any open windows
