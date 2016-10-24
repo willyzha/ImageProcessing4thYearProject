@@ -1,7 +1,3 @@
-# USAGE
-# python track.py --video video/sample.mov
-
-# import the necessary packages
 import numpy as np
 import argparse
 import cv2
@@ -10,7 +6,6 @@ import cv2
 # ROI points along with whether or not this is input mode
 roiPts = []
 inputMode = False
-roiHist = None
 DEBUG = False
 
 def selectROI(event, x, y, flags, param):
@@ -52,10 +47,9 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     lowerb = np.array([0,100,5])
     upperb = np.array([255,255,255])
     mask = getHSVMask(hsv, lowerb, upperb)
-    
     kernel = np.ones((3,3),np.uint8)
     mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN, kernel)
-    cv2.imshow("mask", mask)
+    
     
     backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
     backProj = cv2.morphologyEx(backProj,cv2.MORPH_OPEN, kernel)
@@ -80,6 +74,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     roi = newBackProj[y:y+height, x:x+width]
     
     if DEBUG:
+        cv2.imshow("mask", mask)
         cv2.imshow("backProj", backProj)
         cv2.imshow("newBackProj", newBackProj) 
         cv2.imshow("roi",roi)   
@@ -88,42 +83,26 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     return (r, aRoiBox)
 
 def main():
-    # construct the argument parse and parse the arguments
-    ap = argparse.ArgumentParser()
-    ap.add_argument("-v", "--video",
-        help = "path to the (optional) video file")
-    args = vars(ap.parse_args())
-
-    # grab the reference to the current frame, list of ROI
-    # points and whether or not it is ROI selection mode
-    global roiPts, inputMode
-
-    # if the video path was not supplied, grab the reference to the
-    # camera
-    if not args.get("video", False):
-        camera = cv2.VideoCapture(0)
-    # otherwise, load the video
-    else:
-        camera = cv2.VideoCapture(args["video"])
+    camera = cv2.VideoCapture(0)
 
     # setup the mouse callback
     cv2.namedWindow("frame")
 
     roiBox = None
+    roiHist = None
 
     # keep looping over the frames
     while True:
         # grab the current frame
         (grabbed, frame) = camera.read()
         
-
         # check to see if we have reached the end of the
         # video
         if not grabbed:
             break
 
         # if the see if the ROI has been computed
-        if roiBox is not None:
+        if roiBox is not None and roiHist is not None:
             (_, roiBox) = camShiftTracker(frame, roiBox, roiHist)
 
         # show the frame and record if the user presses a key
@@ -178,6 +157,11 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    DEBUG = True
+    parser = argparse.ArgumentParser(description='Perform Camshift Tracking.\nUsage: \t"i" to select ROI\n\t"q" to exit' , formatter_class=argparse.RawTextHelpFormatter)
+    
+    parser.add_argument('-d','--debug', dest='DEBUG', action='store_const', const=True, default=False, help='enable debug mode. Displays multiple screens and saves .jpg images.')
+    args = parser.parse_args()
+    
+    DEBUG = args.DEBUG
     main()
     
