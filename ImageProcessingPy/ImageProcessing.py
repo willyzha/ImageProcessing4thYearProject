@@ -68,9 +68,6 @@ def main():
     termination = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
     roiBox = None
 
-    lowerb = np.array([231,124,25])
-    upperb = np.array([18,255,255])
-
     # keep looping over the frames
     while True:
         # grab the current frame
@@ -88,17 +85,21 @@ def main():
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             
             # Mask to remove the low S and V values (white & black)
+            lowerb = np.array([0,100,25])
+            upperb = np.array([255,255,255])
             mask = getHSVMask(hsv, lowerb, upperb)
             
-            kernel = np.ones((5,5),np.uint8)
+            kernel = np.ones((3,3),np.uint8)
             mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN, kernel)
             cv2.imshow("mask", mask)
             
             backProj = cv2.calcBackProject([hsv], [0], roiHist, [0, 180], 1)
+            backProj = cv2.morphologyEx(backProj,cv2.MORPH_OPEN, kernel)
             newBackProj = cv2.bitwise_and(backProj, mask)
             # apply cam shift to the back projection, convert the
             # points to a bounding box, and then draw them
             newBackProj = cv2.medianBlur(newBackProj, 5)
+            cv2.imshow("newBackProj", newBackProj)  
             (r, roiBox) = cv2.CamShift(newBackProj, roiBox, termination)
             pts = np.int0(cv2.boxPoints(r))
             cv2.polylines(frame, [pts], True, (0, 255, 0), 2)
@@ -131,19 +132,19 @@ def main():
             cv2.imshow("roi",roi)
             
             cv2.imwrite("newBackProj.jpg", newBackProj)
-            cv2.imshow("newBackProj", newBackProj)
-            edge = cv2.Canny(roi,100,200)
-            edge = cv2.GaussianBlur(edge, (5,5),0)
-            cv2.imshow("canny", edge)
-            circles = circles = cv2.HoughCircles(edge,cv2.HOUGH_GRADIENT,2,20,
-                            param1=50,param2=150,minRadius=0,maxRadius=0)
-            if circles is not None:
-                circles = np.uint16(np.around(circles))
-                for i in circles[0,:]:
-                    # draw the outer circle
-                    cv2.circle(edge,(i[0],i[1]),i[2],(0,255,0),2)
-                    # draw the center of the circle
-                    cv2.circle(edge,(i[0],i[1]),2,(0,0,255),3)
+            
+#             edge = cv2.Canny(roi,100,200)
+#             edge = cv2.GaussianBlur(edge, (5,5),0)
+#             cv2.imshow("canny", edge)
+#             circles = circles = cv2.HoughCircles(edge,cv2.HOUGH_GRADIENT,2,20,
+#                             param1=50,param2=150,minRadius=0,maxRadius=0)
+#             if circles is not None:
+#                 circles = np.uint16(np.around(circles))
+#                 for i in circles[0,:]:
+#                     # draw the outer circle
+#                     cv2.circle(edge,(i[0],i[1]),i[2],(0,255,0),2)
+#                     # draw the center of the circle
+#                     cv2.circle(edge,(i[0],i[1]),2,(0,0,255),3)
 
         # show the frame and record if the user presses a key
         cv2.imshow("frame", frame)
@@ -180,6 +181,8 @@ def main():
 
             # compute a HSV histogram for the ROI and store the
             # bounding box
+            lowerb = np.array([231,124,25])
+            upperb = np.array([18,255,255])
             mask  = getHSVMask(roi, lowerb, upperb)
             roiHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
             roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
