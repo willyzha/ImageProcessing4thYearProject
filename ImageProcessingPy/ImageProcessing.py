@@ -8,23 +8,20 @@ import cv2
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
-frame = None
 roiPts = []
 inputMode = False
+roiHist = None
+DEBUG = False
 
 def selectROI(event, x, y, flags, param):
-    # grab the reference to the current frame, list of ROI
-    # points and whether or not it is ROI selection mode
-    global frame, roiPts, inputMode
-
     # if we are in ROI selection mode, the mouse was clicked,
     # and we do not already have four points, then update the
     # list of ROI points with the (x, y) location of the click
     # and draw the circle
     if inputMode and event == cv2.EVENT_LBUTTONDOWN and len(roiPts) < 4:
         roiPts.append((x, y))
-        cv2.circle(frame, (x, y), 4, (0, 255, 0), 2)
-        cv2.imshow("frame", frame)
+        cv2.circle(param, (x, y), 4, (0, 255, 0), 2)
+        cv2.imshow("frame", param)
 
 def getHSVMask(frame, lowerb, upperb):
     if lowerb[0] < upperb[0]:
@@ -37,7 +34,58 @@ def getHSVMask(frame, lowerb, upperb):
         temp[0] = 0
         mask2 = cv2.inRange(frame, temp, upperb)
         return cv2.bitwise_or(mask1, mask2)
-        
+
+#INPUT  start ROI location (RotatedRect)
+#       roiHistogram (MAT)
+#OUTPUT center of new ROI
+def camShiftTracker(aFrame, aRoiBox, aRoiHist):
+    # initialize the termination criteria for cam shift, indicating
+    # a maximum of ten iterations or movement by a least one pixel
+    # along with the bounding box of the ROI
+    termination = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
+    
+    # convert the current aFrame to the HSV color space
+    # and perform mean shift
+    hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
+    
+    # Mask to remove the low S and V values (white & black)
+    lowerb = np.array([0,100,5])
+    upperb = np.array([255,255,255])
+    mask = getHSVMask(hsv, lowerb, upperb)
+    
+    kernel = np.ones((3,3),np.uint8)
+    mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN, kernel)
+    cv2.imshow("mask", mask)
+    
+    backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
+    backProj = cv2.morphologyEx(backProj,cv2.MORPH_OPEN, kernel)
+    newBackProj = cv2.bitwise_and(backProj, mask)
+    # apply cam shift to the back projection, convert the
+    # points to a bounding box, and then draw them
+    newBackProj = cv2.medianBlur(newBackProj, 5)
+     
+    (r, aRoiBox) = cv2.CamShift(newBackProj, aRoiBox, termination)
+    pts = np.int0(cv2.boxPoints(r))
+    cv2.polylines(aFrame, [pts], True, (0, 255, 0), 2)
+    
+    center = np.uint16(np.around(r[0]))
+    cv2.circle(aFrame,(center[0],center[1]),2,(0,0,255),3)
+
+    x, y, width, height = cv2.boundingRect(pts)
+    if x < 0:
+        x = 0
+    if y < 0:
+        y = 0
+    
+    roi = newBackProj[y:y+height, x:x+width]
+    
+    if DEBUG:
+        cv2.imshow("backProj", backProj)
+        cv2.imshow("newBackProj", newBackProj) 
+        cv2.imshow("roi",roi)   
+        cv2.imwrite("newBackProj.jpg", newBackProj)
+    
+    return (r, aRoiBox)
 
 def main():
     # construct the argument parse and parse the arguments
@@ -48,7 +96,7 @@ def main():
 
     # grab the reference to the current frame, list of ROI
     # points and whether or not it is ROI selection mode
-    global frame, roiPts, inputMode
+    global roiPts, inputMode
 
     # if the video path was not supplied, grab the reference to the
     # camera
@@ -60,18 +108,14 @@ def main():
 
     # setup the mouse callback
     cv2.namedWindow("frame")
-    cv2.setMouseCallback("frame", selectROI)
 
-    # initialize the termination criteria for cam shift, indicating
-    # a maximum of ten iterations or movement by a least one pixel
-    # along with the bounding box of the ROI
-    termination = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
     roiBox = None
 
     # keep looping over the frames
     while True:
         # grab the current frame
         (grabbed, frame) = camera.read()
+        
 
         # check to see if we have reached the end of the
         # video
@@ -80,71 +124,7 @@ def main():
 
         # if the see if the ROI has been computed
         if roiBox is not None:
-            # convert the current frame to the HSV color space
-            # and perform mean shift
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            
-            # Mask to remove the low S and V values (white & black)
-            lowerb = np.array([0,100,25])
-            upperb = np.array([255,255,255])
-            mask = getHSVMask(hsv, lowerb, upperb)
-            
-            kernel = np.ones((3,3),np.uint8)
-            mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN, kernel)
-            cv2.imshow("mask", mask)
-            
-            backProj = cv2.calcBackProject([hsv], [0], roiHist, [0, 180], 1)
-            backProj = cv2.morphologyEx(backProj,cv2.MORPH_OPEN, kernel)
-            newBackProj = cv2.bitwise_and(backProj, mask)
-            # apply cam shift to the back projection, convert the
-            # points to a bounding box, and then draw them
-            newBackProj = cv2.medianBlur(newBackProj, 5)
-            cv2.imshow("newBackProj", newBackProj)  
-            (r, roiBox) = cv2.CamShift(newBackProj, roiBox, termination)
-            pts = np.int0(cv2.boxPoints(r))
-            cv2.polylines(frame, [pts], True, (0, 255, 0), 2)
-            cv2.imshow("backProj", backProj)
-
-            center = np.uint16(np.around(r[0]))
-            cv2.circle(frame,(center[0],center[1]),2,(0,0,255),3)
-                                    
-            orig = newBackProj.copy()
-            roiPts = np.array(pts)
-            #print roiPts[:,0]
-#             tl = np.array([min(roiPts[:,0]), min(roiPts[:,1])])
-#             br = np.array([max(roiPts[:,0]), max(roiPts[:,1])])
-#             if tl[0] < 0:
-#                 tl[0] = 0
-#             if tl[1] < 0:
-#                 tl[1] = 0
-#             
-#             #print roiPts
-#             print tl,br
-#             roi = orig[tl[1]:br[1], tl[0]:br[0]]
-            x, y, width, height = cv2.boundingRect(pts)
-            if x < 0:
-                x = 0
-            if y < 0:
-                y = 0
-            
-            print x, y, width, height
-            roi = newBackProj[y:y+height, x:x+width]
-            cv2.imshow("roi",roi)
-            
-            cv2.imwrite("newBackProj.jpg", newBackProj)
-            
-#             edge = cv2.Canny(roi,100,200)
-#             edge = cv2.GaussianBlur(edge, (5,5),0)
-#             cv2.imshow("canny", edge)
-#             circles = circles = cv2.HoughCircles(edge,cv2.HOUGH_GRADIENT,2,20,
-#                             param1=50,param2=150,minRadius=0,maxRadius=0)
-#             if circles is not None:
-#                 circles = np.uint16(np.around(circles))
-#                 for i in circles[0,:]:
-#                     # draw the outer circle
-#                     cv2.circle(edge,(i[0],i[1]),i[2],(0,255,0),2)
-#                     # draw the center of the circle
-#                     cv2.circle(edge,(i[0],i[1]),2,(0,0,255),3)
+            (_, roiBox) = camShiftTracker(frame, roiBox, roiHist)
 
         # show the frame and record if the user presses a key
         cv2.imshow("frame", frame)
@@ -164,7 +144,7 @@ def main():
             # been selected; press any key to exit ROI selction
             # mode once 4 points have been selected
             while len(roiPts) < 4:
-                cv2.imshow("frame", frame)
+                cv2.setMouseCallback("frame", selectROI, frame)
                 cv2.waitKey(0)
 
             # determine the top-left and bottom-right points
@@ -188,7 +168,7 @@ def main():
             roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
             print roiHist
             roiBox = (tl[0], tl[1], br[0], br[1])
-
+            cv2.setMouseCallback("frame", selectROI, None)
         # if the 'q' key is pressed, stop the loop
         elif key == ord("q"):
             break
@@ -198,4 +178,6 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
+    DEBUG = True
     main()
+    
