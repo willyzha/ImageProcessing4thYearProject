@@ -23,12 +23,12 @@ def getHSVMask(frame, lowerb, upperb):
     if lowerb[0] < upperb[0]:
         return cv2.inRange(frame, lowerb, upperb)
     else:
-        temp = list(upperb)
+        temp = upperb
         temp[0] = 255
-        mask1 = cv2.inRange(frame, lowerb, tuple(temp))
-        temp = list(lowerb)
+        mask1 = cv2.inRange(frame, lowerb, temp)
+        temp = lowerb
         temp[0] = 0
-        mask2 = cv2.inRange(frame, tuple(temp), upperb)
+        mask2 = cv2.inRange(frame, temp, upperb)
         return cv2.bitwise_or(mask1, mask2)
 
 #INPUT  start ROI location (RotatedRect)
@@ -45,7 +45,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
     
     # Mask to remove the low S and V values (white & black)
-    lowerb = np.array([0,100,5])
+    lowerb = np.array([0,40,90])
     upperb = np.array([255,255,255])
     mask = getHSVMask(hsv, lowerb, upperb)
     kernel = np.ones((3,3),np.uint8)
@@ -155,10 +155,10 @@ def main(avgFilterN):
 
             # compute a HSV histogram for the ROI and store the
             # bounding box
-            lowerb = np.array([231,124,25])
-            upperb = np.array([18,255,255])
+            lowerb = np.array([67,124,90])
+            upperb = np.array([115,255,255])
             mask  = getHSVMask(roi, lowerb, upperb)
-            roiHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
+            roiHist = cv2.calcHist([roi], [0], None, [16], [0, 180])
             roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
             
             if DEBUG:
