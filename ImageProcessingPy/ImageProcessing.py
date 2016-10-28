@@ -23,12 +23,12 @@ def getHSVMask(frame, lowerb, upperb):
     if lowerb[0] < upperb[0]:
         return cv2.inRange(frame, lowerb, upperb)
     else:
-        temp = upperb
+        temp = list(upperb)
         temp[0] = 255
-        mask1 = cv2.inRange(frame, lowerb, temp)
-        temp = lowerb
+        mask1 = cv2.inRange(frame, lowerb, tuple(temp))
+        temp = list(lowerb)
         temp[0] = 0
-        mask2 = cv2.inRange(frame, temp, upperb)
+        mask2 = cv2.inRange(frame, tuple(temp), upperb)
         return cv2.bitwise_or(mask1, mask2)
 
 #INPUT  start ROI location (RotatedRect)
@@ -120,7 +120,9 @@ def main(avgFilterN):
 
         # show the frame and record if the user presses a key
         cv2.imshow("frame", frame)
-        cv2.imwrite("frame.jpg", frame);
+        
+        if DEBUG:
+            cv2.imwrite("frame.jpg", frame);
         
         key = cv2.waitKey(1) & 0xFF
 
