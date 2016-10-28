@@ -1,6 +1,7 @@
 import numpy as np
 import argparse
 import cv2
+from _collections import deque
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -82,9 +83,9 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     
         print center
     
-    return (r, aRoiBox)
+    return (center, aRoiBox)
 
-def main():
+def main(avgFilterN):
     global roiPts, inputMode
     camera = cv2.VideoCapture(0)
 
@@ -93,6 +94,9 @@ def main():
 
     roiBox = None
     roiHist = None
+    
+    avgFilterX = AveragingFilter(avgFilterN)
+    avgFilterY = AveragingFilter(avgFilterN)
 
     # keep looping over the frames
     while True:
@@ -107,7 +111,12 @@ def main():
 
         # if the see if the ROI has been computed
         if roiBox is not None and roiHist is not None:
-            (_, roiBox) = camShiftTracker(frame, roiBox, roiHist)
+            (center, roiBox) = camShiftTracker(frame, roiBox, roiHist)
+            avgFilterX.add(center[0])
+            avgFilterY.add(center[1])
+                        
+            cv2.circle(frame,(avgFilterX.getAverage(),avgFilterY.getAverage()),2,(255,0,0),3)
+        
 
         # show the frame and record if the user presses a key
         cv2.imshow("frame", frame)
@@ -149,7 +158,10 @@ def main():
             mask  = getHSVMask(roi, lowerb, upperb)
             roiHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
             roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
-            print roiHist
+            
+            if DEBUG:
+                print roiHist
+            
             roiBox = (tl[0], tl[1], br[0], br[1])
             cv2.setMouseCallback("frame", selectROI, None)
         # if the 'q' key is pressed, stop the loop
@@ -161,12 +173,38 @@ def main():
     camera.release()
     cv2.destroyAllWindows()
 
+class AveragingFilter:
+    'Calculates rolling average'
+    def __init__(self, n):
+        self.n = n    
+        self.queue = deque(np.full(10,-1,np.dtype(np.int32)), maxlen=n)
+        self.sum = 0
+        self.numEntries = 0
+        
+    def add(self, value):
+        removedVal = self.queue.popleft()
+        self.queue.append(value)
+        
+        if removedVal == -1:
+            self.sum = self.sum + value
+            self.numEntries = self.numEntries + 1
+        else:
+            self.sum = self.sum + value - removedVal
+        
+    def getAverage(self):
+        if(self.numEntries > 0):
+            return self.sum/self.numEntries
+        else:
+            return -1
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Perform Camshift Tracking.\nUsage: \t"i" to select ROI\n\t"q" to exit' , formatter_class=argparse.RawTextHelpFormatter)
     
     parser.add_argument('-d','--debug', dest='DEBUG', action='store_const', const=True, default=False, help='enable debug mode. Displays multiple screens and saves .jpg images.')
+    parser.add_argument('-filter', dest='avgFilterN', default=10, type=int)
     args = parser.parse_args()
     
     DEBUG = args.DEBUG
-    main()
+    avgFilterN = args.avgFilterN
+    main(avgFilterN)
     
