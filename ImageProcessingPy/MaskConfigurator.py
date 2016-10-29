@@ -33,8 +33,8 @@ def main():
     global Hmin, Smin, Vmin, Hmax, Smax, Vmax
 
     Hmin = 238
-    Smin = 107
-    Vmin = 13
+    Smin = 40
+    Vmin = 90
     Hmax = 8
     Smax = 255
     Vmax = 255

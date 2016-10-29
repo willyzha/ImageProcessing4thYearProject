@@ -30,6 +30,10 @@ def getHSVMask(frame, lowerb, upperb):
         temp[0] = 0
         mask2 = cv2.inRange(frame, temp, upperb)
         return cv2.bitwise_or(mask1, mask2)
+    
+def drawCrossHair(frame, x, y, size):
+    cv2.line(frame, (x+size, y),(x-size,y),color=(0,0,255),thickness=1)
+    cv2.line(frame, (x, y+size),(x,y-size),color=(0,0,255),thickness=1)
 
 #INPUT  start ROI location (RotatedRect)
 #       roiHistogram (MAT)
@@ -79,15 +83,16 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
         cv2.imshow("backProj", backProj)
         cv2.imshow("newBackProj", newBackProj) 
         cv2.imshow("roi",roi)   
-        cv2.imwrite("newBackProj.jpg", newBackProj)
     
         print center
     
     return (center, aRoiBox)
 
-def main(avgFilterN):
+def main(resolution, avgFilterN):
     global roiPts, inputMode
     camera = cv2.VideoCapture(0)
+    camera.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
+    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
 
     # setup the mouse callback
     cv2.namedWindow("frame")
@@ -109,14 +114,27 @@ def main(avgFilterN):
             print "Could not read from camera exiting..."
             break
 
+        drawCrossHair(frame, resolution[0]/2, resolution[1]/2, 10)
+
         # if the see if the ROI has been computed
         if roiBox is not None and roiHist is not None:
             (center, roiBox) = camShiftTracker(frame, roiBox, roiHist)
             avgFilterX.add(center[0])
             avgFilterY.add(center[1])
-                        
-            cv2.circle(frame,(avgFilterX.getAverage(),avgFilterY.getAverage()),2,(255,0,0),3)
-        
+            
+            xPos = avgFilterX.getAverage()
+            yPos = avgFilterY.getAverage()
+            
+            cv2.circle(frame,(xPos,yPos),2,(255,0,0),3)
+            cv2.putText(frame, text="("+str(xPos)+","+str(yPos)+")", org=(xPos+10,yPos), 
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+                        color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
+
+            error = [resolution[0]/2-xPos, resolution[1]/2-yPos]
+            
+            cv2.putText(frame, text="err=("+str(error[0])+","+str(error[1])+")", 
+                        org=(10,resolution[1]-10), fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+                        color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
 
         # show the frame and record if the user presses a key
         cv2.imshow("frame", frame)
@@ -155,10 +173,10 @@ def main(avgFilterN):
 
             # compute a HSV histogram for the ROI and store the
             # bounding box
-            lowerb = np.array([67,124,90])
-            upperb = np.array([115,255,255])
+            lowerb = np.array([39,40,90])
+            upperb = np.array([100,255,255])
             mask  = getHSVMask(roi, lowerb, upperb)
-            roiHist = cv2.calcHist([roi], [0], None, [16], [0, 180])
+            roiHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
             roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
             
             if DEBUG:
@@ -202,11 +220,15 @@ class AveragingFilter:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Perform Camshift Tracking.\nUsage: \t"i" to select ROI\n\t"q" to exit' , formatter_class=argparse.RawTextHelpFormatter)
     
-    parser.add_argument('-d','--debug', dest='DEBUG', action='store_const', const=True, default=False, help='enable debug mode. Displays multiple screens and saves .jpg images.')
-    parser.add_argument('-filter', dest='avgFilterN', default=10, type=int)
+    parser.add_argument('-d','--debug', dest='debug', action='store_const', const=True, default=False, help='enable debug mode. Displays multiple screens and saves .jpg images.')
+    parser.add_argument('-filter', dest='avgFilterN', default=10, type=int, help='set length of averaging filter.')
+    parser.add_argument('-resolution', dest='res', default=[640, 480], nargs=2, type=int, help='set resolution of camera video capture. usage: -resolution [X] [Y].')
     args = parser.parse_args()
     
-    DEBUG = args.DEBUG
+    print args
+    
+    DEBUG = args.debug
     avgFilterN = args.avgFilterN
-    main(avgFilterN)
+    resolution = args.res
+    main(resolution, avgFilterN)
     
