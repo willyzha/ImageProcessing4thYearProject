@@ -1,2 +1,7 @@
 CascadeSetup/data/neg/*.png
 CascadeSetup/data/data/*.png
+.idea/*
+ImageProcessing/ImageProcessing.iml
+ImageProcessingPy/.idea/*
+ImageProcessingPy/ImageProcessingPy.iml
+
