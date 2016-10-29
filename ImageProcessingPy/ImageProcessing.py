@@ -3,11 +3,24 @@ import argparse
 import cv2
 from _collections import deque
 
+# Import the necessary packages to use PiCamera instead of webcam
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import time
+
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
 roiPts = []
 inputMode = False
 DEBUG = False
+
+# initialize the camera and grab a reference to the raw camera capture
+camera = PiCamera()
+camera.resolution = (640, 480)
+camera.framerate = 32
+rawCapture = PiRGBArray(camera, size=(640,480))
+# allow the camera to warm up
+time.sleep(0.1)
 
 def selectROI(event, x, y, flags, param):
     # if we are in ROI selection mode, the mouse was clicked,
@@ -90,6 +103,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
 
 def main(resolution, avgFilterN):
     global roiPts, inputMode
+    global camera, rawCapture
     camera = cv2.VideoCapture(0)
     camera.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
     camera.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
@@ -104,44 +118,41 @@ def main(resolution, avgFilterN):
     avgFilterY = AveragingFilter(avgFilterN)
 
     # keep looping over the frames
-    while True:
+    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port="true"):
         # grab the current frame
-        (grabbed, frame) = camera.read()
+        # (grabbed, frame) = camera.read()
         
         # check to see if we have reached the end of the
         # video
-        if not grabbed:
-            print "Could not read from camera exiting..."
-            break
-
+        image = frame.array
         drawCrossHair(frame, resolution[0]/2, resolution[1]/2, 10)
 
         # if the see if the ROI has been computed
         if roiBox is not None and roiHist is not None:
-            (center, roiBox) = camShiftTracker(frame, roiBox, roiHist)
+            (center, roiBox) = camShiftTracker(image, roiBox, roiHist)
             avgFilterX.add(center[0])
             avgFilterY.add(center[1])
             
             xPos = avgFilterX.getAverage()
             yPos = avgFilterY.getAverage()
             
-            cv2.circle(frame,(xPos,yPos),2,(255,0,0),3)
-            cv2.putText(frame, text="("+str(xPos)+","+str(yPos)+")", org=(xPos+10,yPos), 
+            cv2.circle(image,(xPos,yPos),2,(255,0,0),3)
+            cv2.putText(image, text="("+str(xPos)+","+str(yPos)+")", org=(xPos+10,yPos),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
                         color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
 
             error = [resolution[0]/2-xPos, resolution[1]/2-yPos]
             
-            cv2.putText(frame, text="err=("+str(error[0])+","+str(error[1])+")", 
+            cv2.putText(image, text="err=("+str(error[0])+","+str(error[1])+")",
                         org=(10,resolution[1]-10), fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
                         color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
 
         # show the frame and record if the user presses a key
-        cv2.imshow("frame", frame)
+        cv2.imshow("frame", image)
         
         if DEBUG:
-            cv2.imwrite("frame.jpg", frame);
-        
+            cv2.imwrite("frame.jpg", image);
+
         key = cv2.waitKey(1) & 0xFF
 
         # handle if the 'i' key is pressed, then go into ROI
@@ -150,13 +161,13 @@ def main(resolution, avgFilterN):
             # indicate that we are in input mode and clone the
             # frame
             inputMode = True
-            orig = frame.copy()
+            orig = image.copy()
 
             # keep looping until 4 reference ROI points have
             # been selected; press any key to exit ROI selction
             # mode once 4 points have been selected
             while len(roiPts) < 4:
-                cv2.setMouseCallback("frame", selectROI, frame)
+                cv2.setMouseCallback("frame", selectROI, image)
                 cv2.waitKey(0)
 
             # determine the top-left and bottom-right points
@@ -189,9 +200,8 @@ def main(resolution, avgFilterN):
             print "Quitting"
             break
 
-    # cleanup the camera and close any open windows
-    camera.release()
-    cv2.destroyAllWindows()
+        # cleanup the camera and close any open windows
+        rawCapture.truncate(0)
 
 class AveragingFilter:
     'Calculates rolling average'
