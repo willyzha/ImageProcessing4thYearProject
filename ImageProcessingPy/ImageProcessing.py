@@ -2,11 +2,24 @@ import numpy as np
 import argparse
 import cv2
 
+# Import the necessary packages to use PiCamera instead of webcam
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import time
+
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
 roiPts = []
 inputMode = False
 DEBUG = False
+
+# initialize the camera and grab a reference to the raw camera capture
+camera = PiCamera()
+camera.resolution = (640, 480)
+camera.framerate = 32
+rawCapture = PiRGBArray(camera, size=(640,480))
+# allow the camera to warm up
+time.sleep(0.1)
 
 def selectROI(event, x, y, flags, param):
     # if we are in ROI selection mode, the mouse was clicked,
@@ -86,32 +99,45 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
 
 def main():
     global roiPts, inputMode
-    camera = cv2.VideoCapture(0)
+
+    global camera, rawCapture
+# camera variable is previously initialized with PiCamera
+#    camera = cv2.VideoCapture(0)
 
     # setup the mouse callback
     cv2.namedWindow("frame")
 
     roiBox = None
     roiHist = None
+    
+    # initialize the rawCapture to be used in the loop
+#    camera = PiCamera()
+#    camera.resolution = (640, 480)
+#    camera.framerate = 32
+#    rawCapture = PiRGBArray (camera, size=(640, 480))
+
+    # allow the camera to warm up
+#    time.sleep(0.1)
 
     # keep looping over the frames
-    while True:
+#    while True:
+    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port="true"):
         # grab the current frame
-        (grabbed, frame) = camera.read()
+        # (grabbed, frame) = camera.read()
         
         # check to see if we have reached the end of the
         # video
-        if not grabbed:
-            print "Could not read from camera exiting..."
-            break
-
+        #if not grabbed:
+        #    print "Could not read from camera exiting..."
+        #    break
+        image = frame.array
         # if the see if the ROI has been computed
         if roiBox is not None and roiHist is not None:
-            (_, roiBox) = camShiftTracker(frame, roiBox, roiHist)
+            (_, roiBox) = camShiftTracker(image, roiBox, roiHist)
 
         # show the frame and record if the user presses a key
-        cv2.imshow("frame", frame)
-        cv2.imwrite("frame.jpg", frame);
+        cv2.imshow("frame", image)
+        cv2.imwrite("frame.jpg", image);
         
         key = cv2.waitKey(1) & 0xFF
 
@@ -121,13 +147,13 @@ def main():
             # indicate that we are in input mode and clone the
             # frame
             inputMode = True
-            orig = frame.copy()
+            orig = image.copy()
 
             # keep looping until 4 reference ROI points have
             # been selected; press any key to exit ROI selction
             # mode once 4 points have been selected
             while len(roiPts) < 4:
-                cv2.setMouseCallback("frame", selectROI, frame)
+                cv2.setMouseCallback("frame", selectROI, image)
                 cv2.waitKey(0)
 
             # determine the top-left and bottom-right points
@@ -157,9 +183,8 @@ def main():
             print "Quitting"
             break
 
-    # cleanup the camera and close any open windows
-    camera.release()
-    cv2.destroyAllWindows()
+        # cleanup the camera and close any open windows
+        rawCapture.truncate(0)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Perform Camshift Tracking.\nUsage: \t"i" to select ROI\n\t"q" to exit' , formatter_class=argparse.RawTextHelpFormatter)
