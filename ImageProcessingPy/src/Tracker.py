@@ -1,10 +1,10 @@
 import argparse
-from ProcessingModules import ImageProcessing
-from ProcessingModules.ImageProcessing import enableDebug
-from CameraModules.PiCamModule import PiCam
+import ImageProcessing
+from WebcamModule import Webcam
+from ImageProcessing import enableDebug
 
 def processImage(resolution, avgFilterN):
-    camera = PiCam(resolution)
+    camera = Webcam(resolution)
     ImageProcessing.processImage(resolution, avgFilterN, camera)
 
 if __name__ == "__main__":
@@ -20,6 +20,6 @@ if __name__ == "__main__":
     resolution = args.res
     
     if debug:
-        enableDebug()        
-    
+        enableDebug()
+        
     processImage(resolution, avgFilterN)

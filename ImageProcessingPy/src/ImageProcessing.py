@@ -2,6 +2,7 @@ import numpy as np
 import argparse
 import cv2
 from _collections import deque
+import WebcamModule
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -88,11 +89,15 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     
     return (center, aRoiBox)
 
-def main(resolution, avgFilterN):
+def processImage(resolution, avgFilterN, *cameraIn):
     global roiPts, inputMode
-    camera = cv2.VideoCapture(0)
-    camera.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
-    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
+
+    # if camera is not passed in then use default webcam
+    camera = None
+    if cameraIn:
+        camera = cameraIn[0]
+    else:
+        camera = WebcamModule.Webcam(resolution)    
 
     # setup the mouse callback
     cv2.namedWindow("frame")
@@ -106,7 +111,7 @@ def main(resolution, avgFilterN):
     # keep looping over the frames
     while True:
         # grab the current frame
-        (grabbed, frame) = camera.read()
+        (grabbed, frame) = camera.getFrame()
         
         # check to see if we have reached the end of the
         # video
@@ -216,6 +221,10 @@ class AveragingFilter:
             return self.sum/self.numEntries
         else:
             return -1
+        
+def enableDebug():
+    global DEBUG
+    DEBUG = True
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Perform Camshift Tracking.\nUsage: \t"i" to select ROI\n\t"q" to exit' , formatter_class=argparse.RawTextHelpFormatter)
@@ -224,11 +233,13 @@ if __name__ == "__main__":
     parser.add_argument('-filter', dest='avgFilterN', default=10, type=int, help='set length of averaging filter.')
     parser.add_argument('-resolution', dest='res', default=[640, 480], nargs=2, type=int, help='set resolution of camera video capture. usage: -resolution [X] [Y].')
     args = parser.parse_args()
-    
-    print args
-    
-    DEBUG = args.debug
+
+    debug = args.debug
     avgFilterN = args.avgFilterN
     resolution = args.res
-    main(resolution, avgFilterN)
+    
+    if debug:
+        enableDebug()
+            
+    processImage(resolution, avgFilterN)
     
