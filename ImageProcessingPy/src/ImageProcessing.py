@@ -2,6 +2,7 @@ import numpy as np
 import argparse
 import cv2
 from _collections import deque
+from collections import namedtuple
 import WebcamModule
 
 # initialize the current frame of the video, along with the list of
@@ -46,7 +47,7 @@ def compareHist(frame, window, modelHist):
     #roi = orig[tl[1]:br[1], tl[0]:br[0]]
     #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     
-    roi = frame[window['y']:window['y']+window['h'], window['x']:window['x']+window['w']]
+    roi = frame[window.y:window.y+window.h, window.x:window.x+window.w]
     roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
    
     lowerb = np.array([39,40,90])
@@ -63,6 +64,27 @@ def compareHist(frame, window, modelHist):
     diff = cv2.compareHist(newHist, modelHist, cv2.HISTCMP_BHATTACHARYYA)
     print diff
     return diff
+
+def drawOverlay(targetFrame,crossHair=None, errorText=None, diffText=None, point=None, text=None):
+    
+    if crossHair is not None:
+        drawCrossHair(targetFrame, crossHair[0], crossHair[1], crossHair[2])
+    if errorText is not None:
+        print "errorText"
+        cv2.putText(targetFrame, text=errorText.text, 
+            org=errorText.origin, fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+            color=errorText.color,thickness=1, lineType=cv2.LINE_AA)
+    if diffText is not None:
+        print "diffText"
+        cv2.putText(targetFrame, text=diffText.text, 
+            org=diffText.origin, fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+            color=diffText.color,thickness=1, lineType=cv2.LINE_AA)
+    if point is not None:
+        cv2.circle(targetFrame,(point.x,point.y),2,point.color,thickness=3)
+    if text is not None:
+        cv2.putText(targetFrame, text=text.text, org=text.origin, 
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+            color=text.color,thickness=1, lineType=cv2.LINE_AA)
 
 #INPUT  start ROI location (RotatedRect)
 #       roiHistogram (MAT)
@@ -104,8 +126,9 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
         x = 0
     if y < 0:
         y = 0
-   
-    boundingRect = {'x':x, 'y':y, 'w':width, 'h':height}
+    
+    rect = namedtuple('boundingRect', ['x', 'y', 'w', 'h'])
+    boundingRect = rect(x, y, width, height)
    
     if DEBUG:
         roi = newBackProj[y:y+height, x:x+width]
@@ -150,8 +173,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
             break
 
         outputFrame = frame.copy()
-        drawCrossHair(outputFrame, resolution[0]/2, resolution[1]/2, 10)
-
+        
         # if the see if the ROI has been computed
         if roiBox is not None and modelHist is not None:
             (center, roiBoundingBox, roiBox) = camShiftTracker(outputFrame, roiBox, modelHist)
@@ -167,23 +189,27 @@ def processImage(resolution, avgFilterN, *cameraIn):
                 
                 xPos = avgFilterX.getAverage()
                 yPos = avgFilterY.getAverage()
+                    
+                error = (resolution[0]/2-xPos, resolution[1]/2-yPos)
                 
-                cv2.circle(outputFrame,(xPos,yPos),2,(255,0,0),3)
-                cv2.putText(outputFrame, text="("+str(xPos)+","+str(yPos)+")", org=(xPos+10,yPos), 
-                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
-                            color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
-    
-                error = [resolution[0]/2-xPos, resolution[1]/2-yPos]
+                text = namedtuple('text', ['text', 'origin', 'color'])
+                point = namedtuple('point', ['x', 'y', 'color'])
+                                
+                avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (255,0,0))
+                errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,resolution[1]-10), (255,0,0))
+                diffText = text("diff=("+str(diff)+")", (150,resolution[1]-10), (255,0,0))
                 
-                cv2.putText(outputFrame, text="err=("+str(error[0])+","+str(error[1])+")", 
-                            org=(10,resolution[1]-10), fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
-                            color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
-                
-                cv2.putText(outputFrame, text="diff=("+str(diff)+")", 
-                            org=(150,resolution[1]-10), fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
-                            color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
+                avgPoint = point(xPos, yPos, (255,0,0))
+                drawOverlay(outputFrame, 
+                            errorText=errorText,
+                            diffText=diffText,
+                            point=avgPoint,
+                            text=avgPointText)
 
         # show the frame and record if the user presses a key
+        
+        drawOverlay(outputFrame, 
+                    crossHair=(resolution[0]/2, resolution[1]/2, 10))
         cv2.imshow("frame", outputFrame)
         
         if DEBUG:
