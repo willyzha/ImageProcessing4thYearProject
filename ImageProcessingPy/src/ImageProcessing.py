@@ -23,10 +23,8 @@ def selectROI(event, x, y, flags, param):
 
 def getHSVMask(frame, lowerb, upperb):
     if lowerb[0] < upperb[0]:
-        print "type 1"
         return cv2.inRange(frame, lowerb, upperb)
     else:
-        print "type 2"
         temp = upperb
         temp[0] = 255
         mask1 = cv2.inRange(frame, lowerb, temp)
@@ -39,9 +37,7 @@ def drawCrossHair(frame, x, y, size):
     cv2.line(frame, (x+size, y),(x-size,y),color=(0,0,255),thickness=1)
     cv2.line(frame, (x, y+size),(x,y-size),color=(0,0,255),thickness=1)
     
-def compareHist(frame, window, modelHist):
-    print "compareHist"
-    
+def compareHist(frame, window, modelHist):  
     #print window
     
     #roi = orig[tl[1]:br[1], tl[0]:br[0]]
@@ -62,7 +58,6 @@ def compareHist(frame, window, modelHist):
     
     newHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
     diff = cv2.compareHist(newHist, modelHist, cv2.HISTCMP_BHATTACHARYYA)
-    print diff
     return diff
 
 def drawOverlay(targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsToDraw=[]):
@@ -202,7 +197,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
                             pointsToDraw=[trueCenterPoint, avgCenterPoint])
 
         # show the frame and record if the user presses a key
-        
+                
         drawOverlay(outputFrame, 
                     crossHair=(resolution[0]/2, resolution[1]/2, 10))
         cv2.imshow("frame", outputFrame)
