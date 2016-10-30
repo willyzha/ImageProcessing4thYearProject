@@ -4,6 +4,7 @@ import cv2
 from _collections import deque
 from collections import namedtuple
 import WebcamModule
+from math import sqrt
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -100,7 +101,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     
     backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
     backProj = cv2.morphologyEx(backProj,cv2.MORPH_OPEN, kernel)
-    newBackProj = cv2.bitwise_and(backProj, mask)
+    newBackProj = backProj#cv2.bitwise_and(backProj, mask)
     # apply cam shift to the back projection, convert the
     # points to a bounding box, and then draw them
     newBackProj = cv2.medianBlur(newBackProj, 5)
@@ -127,8 +128,6 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
         cv2.imshow("newBackProj", newBackProj) 
         cv2.imshow("roi",roi)   
     
-        print center
-    
     return (center, boundingRect, aRoiBox, rotatedRectPts)
 
 def processImage(resolution, avgFilterN, *cameraIn):
@@ -150,6 +149,8 @@ def processImage(resolution, avgFilterN, *cameraIn):
     avgFilterX = AveragingFilter(avgFilterN)
     avgFilterY = AveragingFilter(avgFilterN)
 
+    diffAvg = MovingAvgStd()
+
     # keep looping over the frames
     while True:
         # grab the current frame
@@ -168,11 +169,15 @@ def processImage(resolution, avgFilterN, *cameraIn):
             (center, roiBoundingBox, roiBox, pts) = camShiftTracker(outputFrame, roiBox, modelHist)
             
             diff = compareHist(frame, roiBoundingBox, modelHist)
-            if diff > 0.4:
+             
+            if not diffAvg.inRange(diff, 3):
                 print "TrackingFailed"
+                print "diff=" + str(diff)
+                print "mean,std=" + str(diffAvg.getMeanStd())
                 roiBox = None
                 roiPts = []
             else:
+                diffAvg.update(diff)
                 avgFilterX.add(center[0])
                 avgFilterY.add(center[1])
                 
@@ -186,14 +191,16 @@ def processImage(resolution, avgFilterN, *cameraIn):
                                 
                 avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (255,0,0))
                 errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,resolution[1]-10), (255,0,0))
-                diffText = text("diff=("+str(diff)+")", (150,resolution[1]-10), (255,0,0))
+                diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,resolution[1]-10), (255,0,0))
+                stdText = text("mean,std=("+'{0:.5f}'.format(diffAvg.getMeanStd()[0]) + "," +'{0:.5f}'.format(diffAvg.getMeanStd()[1]) + ")", 
+                                (275,resolution[1]-10), (255,0,0))
                 
                 avgCenterPoint = point(xPos, yPos, (255,0,0))
                 trueCenterPoint = point(center[0], center[1], (0,0,255))
                 
                 drawOverlay(outputFrame,
                             boxPts=pts,
-                            textToDraw=[avgPointText, errorText, diffText],
+                            textToDraw=[avgPointText, errorText, diffText, stdText],
                             pointsToDraw=[trueCenterPoint, avgCenterPoint])
 
         # show the frame and record if the user presses a key
@@ -280,6 +287,31 @@ class AveragingFilter:
         else:
             return -1
         
+class MovingAvgStd:
+    # Keeps track of mean and standard deviation
+    def __init__(self):
+        self.count = 0
+        self.mean = 0
+        self.std = 0
+        
+    def update(self, data):
+        origMean = self.mean
+        
+        self.count = self.count + 1
+        self.mean = origMean + (data - origMean)/self.count
+        if self.count > 2:
+            self.std = sqrt((((self.count - 2) * self.std * self.std) + ((data - origMean)*(data-self.mean)))/(self.count - 1))
+
+    def getMeanStd(self):
+        return (self.mean, self.std)
+    
+    def inRange(self, data, nrStd):
+        # For best results this should be checked before calling update
+        if self.count > 10:
+            return data <= self.mean + nrStd * self.std
+        else:
+            return True
+
 def enableDebug():
     global DEBUG
     DEBUG = True
