@@ -149,7 +149,10 @@ def processImage(resolution, avgFilterN, *cameraIn):
     avgFilterX = AveragingFilter(avgFilterN)
     avgFilterY = AveragingFilter(avgFilterN)
 
-    diffAvg = MovingAvgStd()
+    #diffAvg = MovingAvgStd()
+    
+    #For matlab analysis
+    #open("../../MatlabScripts/diff.txt", "w").close()
 
     # keep looping over the frames
     while True:
@@ -169,15 +172,19 @@ def processImage(resolution, avgFilterN, *cameraIn):
             (center, roiBoundingBox, roiBox, pts) = camShiftTracker(outputFrame, roiBox, modelHist)
             
             diff = compareHist(frame, roiBoundingBox, modelHist)
-             
-            if not diffAvg.inRange(diff, 3):
+            
+            # For matlab analysis
+            # fo = open("../../MatlabScripts/diff.txt", 'a')
+            # fo.write(str(diff)+'\n')
+            
+            if diff > 0.5:
                 print "TrackingFailed"
                 print "diff=" + str(diff)
-                print "mean,std=" + str(diffAvg.getMeanStd())
+                #print "mean,std=" + str(diffAvg.getMeanStd())
                 roiBox = None
                 roiPts = []
             else:
-                diffAvg.update(diff)
+                #diffAvg.update(diff)
                 avgFilterX.add(center[0])
                 avgFilterY.add(center[1])
                 
@@ -192,15 +199,15 @@ def processImage(resolution, avgFilterN, *cameraIn):
                 avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (255,0,0))
                 errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,resolution[1]-10), (255,0,0))
                 diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,resolution[1]-10), (255,0,0))
-                stdText = text("mean,std=("+'{0:.5f}'.format(diffAvg.getMeanStd()[0]) + "," +'{0:.5f}'.format(diffAvg.getMeanStd()[1]) + ")", 
-                                (275,resolution[1]-10), (255,0,0))
+                #stdText = text("mean,std=("+'{0:.5f}'.format(diffAvg.getMeanStd()[0]) + "," +'{0:.5f}'.format(diffAvg.getMeanStd()[1]) + ")", 
+                #                (275,resolution[1]-10), (255,0,0))
                 
                 avgCenterPoint = point(xPos, yPos, (255,0,0))
                 trueCenterPoint = point(center[0], center[1], (0,0,255))
                 
                 drawOverlay(outputFrame,
                             boxPts=pts,
-                            textToDraw=[avgPointText, errorText, diffText, stdText],
+                            textToDraw=[avgPointText, errorText, diffText],
                             pointsToDraw=[trueCenterPoint, avgCenterPoint])
 
         # show the frame and record if the user presses a key
@@ -307,7 +314,7 @@ class MovingAvgStd:
     
     def inRange(self, data, nrStd):
         # For best results this should be checked before calling update
-        if self.count > 10:
+        if self.count > 100:
             return data <= self.mean + nrStd * self.std
         else:
             return True
