@@ -22,8 +22,10 @@ def selectROI(event, x, y, flags, param):
 
 def getHSVMask(frame, lowerb, upperb):
     if lowerb[0] < upperb[0]:
+        print "type 1"
         return cv2.inRange(frame, lowerb, upperb)
     else:
+        print "type 2"
         temp = upperb
         temp[0] = 255
         mask1 = cv2.inRange(frame, lowerb, temp)
@@ -35,6 +37,32 @@ def getHSVMask(frame, lowerb, upperb):
 def drawCrossHair(frame, x, y, size):
     cv2.line(frame, (x+size, y),(x-size,y),color=(0,0,255),thickness=1)
     cv2.line(frame, (x, y+size),(x,y-size),color=(0,0,255),thickness=1)
+    
+def compareHist(frame, window, modelHist):
+    print "compareHist"
+    
+    #print window
+    
+    #roi = orig[tl[1]:br[1], tl[0]:br[0]]
+    #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    
+    roi = frame[window['y']:window['y']+window['h'], window['x']:window['x']+window['w']]
+    roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+   
+    lowerb = np.array([39,40,90])
+    upperb = np.array([100,255,255])
+    mask  = getHSVMask(roi, lowerb, upperb)
+    
+    cv2.imwrite("mask.jpg", mask)
+    cv2.imwrite("roi.jpg", roi)
+    
+    #print mask.shape
+    #print roi.shape
+    
+    newHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
+    diff = cv2.compareHist(newHist, modelHist, cv2.HISTCMP_BHATTACHARYYA)
+        
+    return diff
 
 #INPUT  start ROI location (RotatedRect)
 #       roiHistogram (MAT)
@@ -76,10 +104,12 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
         x = 0
     if y < 0:
         y = 0
-    
-    roi = newBackProj[y:y+height, x:x+width]
-    
+   
+    boundingRect = {'x':x, 'y':y, 'w':width, 'h':height}
+   
     if DEBUG:
+        roi = newBackProj[y:y+height, x:x+width]
+        
         cv2.imshow("mask", mask)
         cv2.imshow("backProj", backProj)
         cv2.imshow("newBackProj", newBackProj) 
@@ -87,7 +117,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     
         print center
     
-    return (center, aRoiBox)
+    return (center, boundingRect, aRoiBox)
 
 def processImage(resolution, avgFilterN, *cameraIn):
     global roiPts, inputMode
@@ -103,7 +133,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
     cv2.namedWindow("frame")
 
     roiBox = None
-    roiHist = None
+    modelHist = None
     
     avgFilterX = AveragingFilter(avgFilterN)
     avgFilterY = AveragingFilter(avgFilterN)
@@ -119,33 +149,37 @@ def processImage(resolution, avgFilterN, *cameraIn):
             print "Could not read from camera exiting..."
             break
 
-        drawCrossHair(frame, resolution[0]/2, resolution[1]/2, 10)
+        outputFrame = frame.copy()
+        drawCrossHair(outputFrame, resolution[0]/2, resolution[1]/2, 10)
 
         # if the see if the ROI has been computed
-        if roiBox is not None and roiHist is not None:
-            (center, roiBox) = camShiftTracker(frame, roiBox, roiHist)
+        if roiBox is not None and modelHist is not None:
+            (center, roiBoundingBox, roiBox) = camShiftTracker(outputFrame, roiBox, modelHist)
+            
+            compareHist(frame, roiBoundingBox, modelHist)
+            
             avgFilterX.add(center[0])
             avgFilterY.add(center[1])
             
             xPos = avgFilterX.getAverage()
             yPos = avgFilterY.getAverage()
             
-            cv2.circle(frame,(xPos,yPos),2,(255,0,0),3)
-            cv2.putText(frame, text="("+str(xPos)+","+str(yPos)+")", org=(xPos+10,yPos), 
+            cv2.circle(outputFrame,(xPos,yPos),2,(255,0,0),3)
+            cv2.putText(outputFrame, text="("+str(xPos)+","+str(yPos)+")", org=(xPos+10,yPos), 
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
                         color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
 
             error = [resolution[0]/2-xPos, resolution[1]/2-yPos]
             
-            cv2.putText(frame, text="err=("+str(error[0])+","+str(error[1])+")", 
+            cv2.putText(outputFrame, text="err=("+str(error[0])+","+str(error[1])+")", 
                         org=(10,resolution[1]-10), fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
                         color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
 
         # show the frame and record if the user presses a key
-        cv2.imshow("frame", frame)
+        cv2.imshow("frame", outputFrame)
         
         if DEBUG:
-            cv2.imwrite("frame.jpg", frame);
+            cv2.imwrite("frame.jpg", outputFrame);
         
         key = cv2.waitKey(1) & 0xFF
 
@@ -181,11 +215,11 @@ def processImage(resolution, avgFilterN, *cameraIn):
             lowerb = np.array([39,40,90])
             upperb = np.array([100,255,255])
             mask  = getHSVMask(roi, lowerb, upperb)
-            roiHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
-            roiHist = cv2.normalize(roiHist, roiHist, 0, 255, cv2.NORM_MINMAX)
+            modelHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
+            modelHist = cv2.normalize(modelHist, modelHist, 0, 255, cv2.NORM_MINMAX)
             
             if DEBUG:
-                print roiHist
+                print modelHist
             
             roiBox = (tl[0], tl[1], br[0], br[1])
             cv2.setMouseCallback("frame", selectROI, None)
