@@ -61,7 +61,7 @@ def compareHist(frame, window, modelHist):
     
     newHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
     diff = cv2.compareHist(newHist, modelHist, cv2.HISTCMP_BHATTACHARYYA)
-        
+    print diff
     return diff
 
 #INPUT  start ROI location (RotatedRect)
@@ -156,24 +156,32 @@ def processImage(resolution, avgFilterN, *cameraIn):
         if roiBox is not None and modelHist is not None:
             (center, roiBoundingBox, roiBox) = camShiftTracker(outputFrame, roiBox, modelHist)
             
-            compareHist(frame, roiBoundingBox, modelHist)
-            
-            avgFilterX.add(center[0])
-            avgFilterY.add(center[1])
-            
-            xPos = avgFilterX.getAverage()
-            yPos = avgFilterY.getAverage()
-            
-            cv2.circle(outputFrame,(xPos,yPos),2,(255,0,0),3)
-            cv2.putText(outputFrame, text="("+str(xPos)+","+str(yPos)+")", org=(xPos+10,yPos), 
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
-                        color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
-
-            error = [resolution[0]/2-xPos, resolution[1]/2-yPos]
-            
-            cv2.putText(outputFrame, text="err=("+str(error[0])+","+str(error[1])+")", 
-                        org=(10,resolution[1]-10), fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
-                        color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
+            diff = compareHist(frame, roiBoundingBox, modelHist)
+            if diff > 0.4:
+                print "TrackingFailed"
+                roiBox = None
+                roiPts = []
+            else:
+                avgFilterX.add(center[0])
+                avgFilterY.add(center[1])
+                
+                xPos = avgFilterX.getAverage()
+                yPos = avgFilterY.getAverage()
+                
+                cv2.circle(outputFrame,(xPos,yPos),2,(255,0,0),3)
+                cv2.putText(outputFrame, text="("+str(xPos)+","+str(yPos)+")", org=(xPos+10,yPos), 
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+                            color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
+    
+                error = [resolution[0]/2-xPos, resolution[1]/2-yPos]
+                
+                cv2.putText(outputFrame, text="err=("+str(error[0])+","+str(error[1])+")", 
+                            org=(10,resolution[1]-10), fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+                            color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
+                
+                cv2.putText(outputFrame, text="diff=("+str(diff)+")", 
+                            org=(150,resolution[1]-10), fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+                            color=(255,0,0),thickness=1, lineType=cv2.LINE_AA)
 
         # show the frame and record if the user presses a key
         cv2.imshow("frame", outputFrame)
