@@ -65,26 +65,22 @@ def compareHist(frame, window, modelHist):
     print diff
     return diff
 
-def drawOverlay(targetFrame,crossHair=None, errorText=None, diffText=None, point=None, text=None):
+def drawOverlay(targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsToDraw=[]):
     
     if crossHair is not None:
         drawCrossHair(targetFrame, crossHair[0], crossHair[1], crossHair[2])
-    if errorText is not None:
-        print "errorText"
-        cv2.putText(targetFrame, text=errorText.text, 
-            org=errorText.origin, fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
-            color=errorText.color,thickness=1, lineType=cv2.LINE_AA)
-    if diffText is not None:
-        print "diffText"
-        cv2.putText(targetFrame, text=diffText.text, 
-            org=diffText.origin, fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
-            color=diffText.color,thickness=1, lineType=cv2.LINE_AA)
-    if point is not None:
-        cv2.circle(targetFrame,(point.x,point.y),2,point.color,thickness=3)
-    if text is not None:
+    
+    if boxPts is not None:
+        cv2.polylines(targetFrame, [boxPts], True, (0, 255, 0), 2)   
+    
+    for text in textToDraw:
         cv2.putText(targetFrame, text=text.text, org=text.origin, 
             fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
             color=text.color,thickness=1, lineType=cv2.LINE_AA)
+
+    for point in pointsToDraw:
+        cv2.circle(targetFrame,(point.x,point.y),2,point.color,thickness=3)
+
 
 #INPUT  start ROI location (RotatedRect)
 #       roiHistogram (MAT)
@@ -114,14 +110,12 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     # points to a bounding box, and then draw them
     newBackProj = cv2.medianBlur(newBackProj, 5)
      
-    (r, aRoiBox) = cv2.CamShift(newBackProj, aRoiBox, termination)
-    pts = np.int0(cv2.boxPoints(r))
-    cv2.polylines(aFrame, [pts], True, (0, 255, 0), 2)
+    (rotatedRect, aRoiBox) = cv2.CamShift(newBackProj, aRoiBox, termination)
+    rotatedRectPts = np.int0(cv2.boxPoints(rotatedRect))
     
-    center = np.uint16(np.around(r[0]))
-    cv2.circle(aFrame,(center[0],center[1]),2,(0,0,255),3)
-
-    x, y, width, height = cv2.boundingRect(pts)
+    center = np.uint16(np.around(rotatedRect[0]))
+    
+    x, y, width, height = cv2.boundingRect(rotatedRectPts)
     if x < 0:
         x = 0
     if y < 0:
@@ -129,7 +123,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     
     rect = namedtuple('boundingRect', ['x', 'y', 'w', 'h'])
     boundingRect = rect(x, y, width, height)
-   
+    
     if DEBUG:
         roi = newBackProj[y:y+height, x:x+width]
         
@@ -140,7 +134,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     
         print center
     
-    return (center, boundingRect, aRoiBox)
+    return (center, boundingRect, aRoiBox, rotatedRectPts)
 
 def processImage(resolution, avgFilterN, *cameraIn):
     global roiPts, inputMode
@@ -176,7 +170,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
         
         # if the see if the ROI has been computed
         if roiBox is not None and modelHist is not None:
-            (center, roiBoundingBox, roiBox) = camShiftTracker(outputFrame, roiBox, modelHist)
+            (center, roiBoundingBox, roiBox, pts) = camShiftTracker(outputFrame, roiBox, modelHist)
             
             diff = compareHist(frame, roiBoundingBox, modelHist)
             if diff > 0.4:
@@ -199,12 +193,13 @@ def processImage(resolution, avgFilterN, *cameraIn):
                 errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,resolution[1]-10), (255,0,0))
                 diffText = text("diff=("+str(diff)+")", (150,resolution[1]-10), (255,0,0))
                 
-                avgPoint = point(xPos, yPos, (255,0,0))
-                drawOverlay(outputFrame, 
-                            errorText=errorText,
-                            diffText=diffText,
-                            point=avgPoint,
-                            text=avgPointText)
+                avgCenterPoint = point(xPos, yPos, (255,0,0))
+                trueCenterPoint = point(center[0], center[1], (0,0,255))
+                
+                drawOverlay(outputFrame,
+                            boxPts=pts,
+                            textToDraw=[avgPointText, errorText, diffText],
+                            pointsToDraw=[trueCenterPoint, avgCenterPoint])
 
         # show the frame and record if the user presses a key
         
