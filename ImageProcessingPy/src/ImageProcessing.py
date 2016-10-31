@@ -130,6 +130,57 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     
     return (center, boundingRect, aRoiBox, rotatedRectPts)
 
+def redetectionAlg(aFrame, aRoiHist, aLastArea, threshold):
+    
+    # Step1: Find HSV backproject of the frame
+    hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
+    mask = getHSVMask(aFrame, (0, 40, 90), (255,255,255))
+    backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
+    
+    # Step2: Binarize Backprojection
+    ret2, th2 = cv2.threshold(backProj, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    
+    maskedThresh = cv2.bitwise_and(th2, mask)
+    
+    # Step3: Erode and Dilate
+    kernel = np.ones((5,5),np.uint8)
+    maskedThresh = cv2.morphologyEx(th2, cv2.MORPH_OPEN, kernel)
+    cv2.imshow("th2", th2)
+    # NOTE WZ: can try cv2.CHAIN_APPROX_NONE for no approximation
+    im2, contours, hierarchy = cv2.findContours(maskedThresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    tempFrame = aFrame.copy()
+    
+
+    
+    # Step4: Find candidate regions with appropriate size of 30%
+    largeContours = []
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area >= (aLastArea * 0.3):
+            largeContours.append(contour)
+
+    cv2.drawContours(tempFrame, largeContours, -1, (0, 255,0), 3)
+    cv2.imshow("tempFrame", tempFrame)
+
+    matchedRect = None
+    for contour in largeContours:
+        x, y, width, height = cv2.boundingRect(contour)
+        rect = namedtuple('boundingRect', ['x', 'y', 'w', 'h'])
+        boundingRect = rect(x, y, width, height)
+        
+        diff = compareHist(aFrame, boundingRect, aRoiHist)
+        print diff, threshold
+        
+        if diff < threshold:
+            matchedRect = boundingRect
+
+    if matchedRect is None:
+        print "redetect failed"
+    else:
+        print "redetect successful"
+
+    return matchedRect
+
 def processImage(resolution, avgFilterN, *cameraIn):
     global roiPts, inputMode
 
@@ -148,6 +199,9 @@ def processImage(resolution, avgFilterN, *cameraIn):
     
     avgFilterX = AveragingFilter(avgFilterN)
     avgFilterY = AveragingFilter(avgFilterN)
+    
+    trackingLost = False
+    lastArea = 0
 
     #diffAvg = MovingAvgStd()
     
@@ -169,47 +223,59 @@ def processImage(resolution, avgFilterN, *cameraIn):
         
         # if the see if the ROI has been computed
         if roiBox is not None and modelHist is not None:
-            (center, roiBoundingBox, roiBox, pts) = camShiftTracker(outputFrame, roiBox, modelHist)
+            if not trackingLost:
+                (center, roiBoundingBox, roiBox, pts) = camShiftTracker(outputFrame, roiBox, modelHist)
+                diff = compareHist(frame, roiBoundingBox, modelHist)
+                
+                lastArea = roiBoundingBox.h * roiBoundingBox.w
+                
+                if diff > 0.4:
+                    print "TrackingFailed"
+                    print "diff=" + str(diff)
+                    
+                    #roiBox
+                    
+                    trackingLost = True
+                    #print "mean,std=" + str(diffAvg.getMeanStd())
+    #                 roiBox = None
+    #                 roiPts = []
+                else:
+                    #diffAvg.update(diff)
+                    avgFilterX.add(center[0])
+                    avgFilterY.add(center[1])
+                    
+                    xPos = avgFilterX.getAverage()
+                    yPos = avgFilterY.getAverage()
+                        
+                    error = (resolution[0]/2-xPos, resolution[1]/2-yPos)
+                    
+                    text = namedtuple('text', ['text', 'origin', 'color'])
+                    point = namedtuple('point', ['x', 'y', 'color'])
+                                    
+                    avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (255,0,0))
+                    errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,resolution[1]-10), (255,0,0))
+                    diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,resolution[1]-10), (255,0,0))
+                    #stdText = text("mean,std=("+'{0:.5f}'.format(diffAvg.getMeanStd()[0]) + "," +'{0:.5f}'.format(diffAvg.getMeanStd()[1]) + ")", 
+                    #                (275,resolution[1]-10), (255,0,0))
+                    
+                    avgCenterPoint = point(xPos, yPos, (255,0,0))
+                    trueCenterPoint = point(center[0], center[1], (0,0,255))
+                    
+                    drawOverlay(outputFrame,
+                                boxPts=pts,
+                                textToDraw=[avgPointText, errorText, diffText],
+                                pointsToDraw=[trueCenterPoint, avgCenterPoint])
+            else: #Tracking is lost therefore begin running redetectionAlg
+                redetectRoi = redetectionAlg(frame, modelHist, lastArea, 0.4)
+                if redetectRoi is not None:
+                    roiBox = redetectRoi
+                    trackingLost = False
             
-            diff = compareHist(frame, roiBoundingBox, modelHist)
             
             # For matlab analysis
             # fo = open("../../MatlabScripts/diff.txt", 'a')
             # fo.write(str(diff)+'\n')
             
-            if diff > 0.5:
-                print "TrackingFailed"
-                print "diff=" + str(diff)
-                #print "mean,std=" + str(diffAvg.getMeanStd())
-                roiBox = None
-                roiPts = []
-            else:
-                #diffAvg.update(diff)
-                avgFilterX.add(center[0])
-                avgFilterY.add(center[1])
-                
-                xPos = avgFilterX.getAverage()
-                yPos = avgFilterY.getAverage()
-                    
-                error = (resolution[0]/2-xPos, resolution[1]/2-yPos)
-                
-                text = namedtuple('text', ['text', 'origin', 'color'])
-                point = namedtuple('point', ['x', 'y', 'color'])
-                                
-                avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (255,0,0))
-                errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,resolution[1]-10), (255,0,0))
-                diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,resolution[1]-10), (255,0,0))
-                #stdText = text("mean,std=("+'{0:.5f}'.format(diffAvg.getMeanStd()[0]) + "," +'{0:.5f}'.format(diffAvg.getMeanStd()[1]) + ")", 
-                #                (275,resolution[1]-10), (255,0,0))
-                
-                avgCenterPoint = point(xPos, yPos, (255,0,0))
-                trueCenterPoint = point(center[0], center[1], (0,0,255))
-                
-                drawOverlay(outputFrame,
-                            boxPts=pts,
-                            textToDraw=[avgPointText, errorText, diffText],
-                            pointsToDraw=[trueCenterPoint, avgCenterPoint])
-
         # show the frame and record if the user presses a key
                 
         drawOverlay(outputFrame, 
