@@ -211,11 +211,11 @@ def redetectionAlg(aFrame, aRoiHist, aLastArea, aDiffThresh):
         Outputs: 
             matchedRect: Most probable rectangle around object. None if no matches were found
     """
-    # Step1: Find HSV backproject of the frame
+    # Step1: Find HSV back projection of the frame
     hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
     backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
     
-    # Step2: Binarize Backprojection
+    # Step2: Binarize Back Projection
     _, threshold = cv2.threshold(backProj, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
        
     # Step3: Erode and Dilate
