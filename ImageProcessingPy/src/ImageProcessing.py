@@ -12,7 +12,63 @@ roiPts = []
 inputMode = False
 DEBUG = False
 
+
+class AveragingFilter:
+    """ Calculates rolling average
+    """
+    def __init__(self, n):
+        self.n = n    
+        self.queue = deque(np.full(10,-1,np.dtype(np.int32)), maxlen=n)
+        self.sum = 0
+        self.numEntries = 0
+        
+    def add(self, value):
+        removedVal = self.queue.popleft()
+        self.queue.append(value)
+        
+        if removedVal == -1:
+            self.sum = self.sum + value
+            self.numEntries = self.numEntries + 1
+        else:
+            self.sum = self.sum + value - removedVal
+        
+    def getAverage(self):
+        if(self.numEntries > 0):
+            return self.sum/self.numEntries
+        else:
+            return -1
+        
+# Currently unused originally made for adaptive thresholding
+class RunningAvgStd:
+    """ Running average and standard deviation
+    """ 
+    # Keeps track of mean and standard deviation
+    def __init__(self):
+        self.count = 0
+        self.mean = 0
+        self.std = 0
+        
+    def update(self, data):
+        origMean = self.mean
+        
+        self.count = self.count + 1
+        self.mean = origMean + (data - origMean)/self.count
+        if self.count > 2:
+            self.std = sqrt((((self.count - 2) * self.std * self.std) + ((data - origMean)*(data-self.mean)))/(self.count - 1))
+
+    def getMeanStd(self):
+        return (self.mean, self.std)
+    
+    def inRange(self, data, nrStd):
+        # For best results this should be checked before calling update
+        if self.count > 100:
+            return data <= self.mean + nrStd * self.std
+        else:
+            return True
+
 def selectROI(event, x, y, flags, param):
+    """ Mouse call back function for selection initial ROI containing the target object
+    """
     # if we are in ROI selection mode, the mouse was clicked,
     # and we do not already have four points, then update the
     # list of ROI points with the (x, y) location of the click
@@ -23,6 +79,8 @@ def selectROI(event, x, y, flags, param):
         cv2.imshow("frame", param)
 
 def getHSVMask(frame, lowerb, upperb):
+    """ Finds the HSV mask for the input frame given a lower bound and upper bound
+    """
     if lowerb[0] < upperb[0]:
         return cv2.inRange(frame, lowerb, upperb)
     else:
@@ -34,35 +92,41 @@ def getHSVMask(frame, lowerb, upperb):
         mask2 = cv2.inRange(frame, temp, upperb)
         return cv2.bitwise_or(mask1, mask2)
     
-def drawCrossHair(frame, x, y, size):
-    cv2.line(frame, (x+size, y),(x-size,y),color=(0,0,255),thickness=1)
-    cv2.line(frame, (x, y+size),(x,y-size),color=(0,0,255),thickness=1)
-    
-def compareHist(frame, window, modelHist):  
-    #print window
-    
-    #roi = orig[tl[1]:br[1], tl[0]:br[0]]
-    #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-    
-    roi = frame[window.y:window.y+window.h, window.x:window.x+window.w]
+def compareHist(frame, roiWindow, refHist):  
+    """ Compares the histogram of the roiWindow in frame with refHist
+    """
+    # Get the submatrix for the region of interest and convert to HSV
+    roi = frame[roiWindow[1]:roiWindow[1]+roiWindow[3], roiWindow[0]:roiWindow[0]+roiWindow[2]]
     roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
    
+    # Use the same mask from the original histogram generation
     lowerb = np.array([39,40,90])
     upperb = np.array([100,255,255])
     mask  = getHSVMask(roi, lowerb, upperb)
     
-    cv2.imwrite("mask.jpg", mask)
-    cv2.imwrite("roi.jpg", roi)
+    if DEBUG: # Write some the mask and ROI as .jpg files for debugging
+        cv2.imwrite("mask.jpg", mask)
+        cv2.imwrite("roi.jpg", roi)
     
-    #print mask.shape
-    #print roi.shape
-    
+    # Calculate the histogram for the region of interest
     newHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
-    diff = cv2.compareHist(newHist, modelHist, cv2.HISTCMP_BHATTACHARYYA)
+    
+    # Compare the new histogram with original for a diff of 0-1 
+    # 1: no match/overlap
+    # 0: perfect match
+    diff = cv2.compareHist(newHist, refHist, cv2.HISTCMP_BHATTACHARYYA)
     return diff
 
+def drawCrossHair(frame, x, y, size):
+    """ Draw a cross hair
+    """
+    cv2.line(frame, (x+size, y),(x-size,y),color=(0,0,255),thickness=1)
+    cv2.line(frame, (x, y+size),(x,y-size),color=(0,0,255),thickness=1)
+
 def drawOverlay(targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsToDraw=[]):
-    
+    """ Draws crossHair, boxes, text and points on the targetFrame
+        WARNING: DO NOT DRAW ON PROCESSING FRAME!!!
+    """
     if crossHair is not None:
         drawCrossHair(targetFrame, crossHair[0], crossHair[1], crossHair[2])
     
@@ -77,11 +141,19 @@ def drawOverlay(targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsTo
     for point in pointsToDraw:
         cv2.circle(targetFrame,(point.x,point.y),2,point.color,thickness=3)
 
-
-#INPUT  start ROI location (RotatedRect)
-#       roiHistogram (MAT)
-#OUTPUT center of new ROI
 def camShiftTracker(aFrame, aRoiBox, aRoiHist):
+    """ Main CamShift tracking function
+        Performs conversion and processing to find the next region of interest
+        Inputs:
+            aFrame=Updated frame from camera
+            aRoiBox=Box around the previous region of interest
+            aRoiHist=The pre-calculated Hue histogram for the object of interest
+        Outputs: (center, boundingRect, newRoiBox, rotatedRectPts)
+            center: coordinates for the updated center of the object
+            boundingRect: bounding rectangle for the updated object location
+            newRoiBox: updated RoiBox
+            rotatedRectPts: corner coordinates for the rotated rectangle bounding object
+    """
     # initialize the termination criteria for cam shift, indicating
     # a maximum of ten iterations or movement by a least one pixel
     # along with the bounding box of the ROI
@@ -106,7 +178,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     # points to a bounding box, and then draw them
     newBackProj = cv2.medianBlur(newBackProj, 5)
      
-    (rotatedRect, aRoiBox) = cv2.CamShift(newBackProj, aRoiBox, termination)
+    (rotatedRect, newRoiBox) = cv2.CamShift(newBackProj, aRoiBox, termination)
     rotatedRectPts = np.int0(cv2.boxPoints(rotatedRect))
     
     center = np.uint16(np.around(rotatedRect[0]))
@@ -117,8 +189,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     if y < 0:
         y = 0
     
-    rect = namedtuple('boundingRect', ['x', 'y', 'w', 'h'])
-    boundingRect = rect(x, y, width, height)
+    boundingRect = (x, y, width, height)
     
     if DEBUG:
         roi = newBackProj[y:y+height, x:x+width]
@@ -128,60 +199,61 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
         cv2.imshow("newBackProj", newBackProj) 
         cv2.imshow("roi",roi)   
     
-    return (center, boundingRect, aRoiBox, rotatedRectPts)
+    return (center, boundingRect, newRoiBox, rotatedRectPts)
 
-def redetectionAlg(aFrame, aRoiHist, aLastArea, threshold):
-    
+def redetectionAlg(aFrame, aRoiHist, aLastArea, aDiffThresh):
+    """ Algorithm for redetecting the object after it is lost
+        Inputs:
+            aFrame: Frame in which the object is to be searched for
+            aRoiHist: The pre-calculated Hue histogram for the object of interest
+            aLastArea: The area of ROI of the object when last seen
+            aDiffThresh: Min difference threshold to determine the object is found
+        Outputs: 
+            matchedRect: Most probable rectangle around object. None if no matches were found
+    """
     # Step1: Find HSV backproject of the frame
     hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
-    mask = getHSVMask(aFrame, (0, 40, 90), (255,255,255))
     backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
     
     # Step2: Binarize Backprojection
-    ret2, th2 = cv2.threshold(backProj, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    
-    maskedThresh = cv2.bitwise_and(th2, mask)
-    
+    _, threshold = cv2.threshold(backProj, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+       
     # Step3: Erode and Dilate
     kernel = np.ones((5,5),np.uint8)
-    maskedThresh = cv2.morphologyEx(th2, cv2.MORPH_OPEN, kernel)
-    cv2.imshow("th2", th2)
-    # NOTE WZ: can try cv2.CHAIN_APPROX_NONE for no approximation
-    im2, contours, hierarchy = cv2.findContours(maskedThresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    tempFrame = aFrame.copy()
-    
+    maskedThresh = cv2.morphologyEx(threshold, cv2.MORPH_OPEN, kernel)
 
+    # NOTE WZ: can try cv2.CHAIN_APPROX_NONE for no approximation
+    _, contours, _ = cv2.findContours(maskedThresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
     
     # Step4: Find candidate regions with appropriate size of 30%
-    largeContours = []
+    candidateContours = []
     for contour in contours:
         area = cv2.contourArea(contour)
         if area >= (aLastArea * 0.3):
-            largeContours.append(contour)
+            candidateContours.append(contour)
 
-    cv2.drawContours(tempFrame, largeContours, -1, (0, 255,0), 3)
-    cv2.imshow("tempFrame", tempFrame)
+    if DEBUG:
+        contourFrame = aFrame.copy()
+        cv2.drawContours(contourFrame, candidateContours, -1, (0, 255,0), 3)
+        cv2.imshow("DEBUG: Contours with 30% area", contourFrame)
 
+    # Step5: Look through candidate contours and select the one with lowest diff that is below the diff threshold
     matchedRect = None
-    for contour in largeContours:
-        x, y, width, height = cv2.boundingRect(contour)
-        rect = namedtuple('boundingRect', ['x', 'y', 'w', 'h'])
-        boundingRect = rect(x, y, width, height)
-        
+    minDiff = 1 # max diff is 1
+    for contour in candidateContours:
+        boundingRect = cv2.boundingRect(contour)       
         diff = compareHist(aFrame, boundingRect, aRoiHist)
-        print diff, threshold
-        
-        if diff < threshold:
-            matchedRect = boundingRect
 
-    if matchedRect is None:
-        print "redetect failed"
-    else:
-        print "redetect successful"
+        if diff < aDiffThresh and diff < minDiff:
+            minDiff = diff
+            matchedRect = boundingRect
 
     return matchedRect
 
 def processImage(resolution, avgFilterN, *cameraIn):
+    """ Main Loop Function for Tracking
+    """
     global roiPts, inputMode
 
     # if camera is not passed in then use default webcam
@@ -203,7 +275,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
     trackingLost = False
     lastArea = 0
 
-    #diffAvg = MovingAvgStd()
+    #diffAvg = RunningAvgStd()
     
     #For matlab analysis
     #open("../../MatlabScripts/diff.txt", "w").close()
@@ -227,18 +299,10 @@ def processImage(resolution, avgFilterN, *cameraIn):
                 (center, roiBoundingBox, roiBox, pts) = camShiftTracker(outputFrame, roiBox, modelHist)
                 diff = compareHist(frame, roiBoundingBox, modelHist)
                 
-                lastArea = roiBoundingBox.h * roiBoundingBox.w
+                lastArea = roiBoundingBox[2] * roiBoundingBox[3]
                 
                 if diff > 0.4:
-                    print "TrackingFailed"
-                    print "diff=" + str(diff)
-                    
-                    #roiBox
-                    
                     trackingLost = True
-                    #print "mean,std=" + str(diffAvg.getMeanStd())
-    #                 roiBox = None
-    #                 roiPts = []
                 else:
                     #diffAvg.update(diff)
                     avgFilterX.add(center[0])
@@ -336,56 +400,9 @@ def processImage(resolution, avgFilterN, *cameraIn):
     camera.release()
     cv2.destroyAllWindows()
 
-class AveragingFilter:
-    'Calculates rolling average'
-    def __init__(self, n):
-        self.n = n    
-        self.queue = deque(np.full(10,-1,np.dtype(np.int32)), maxlen=n)
-        self.sum = 0
-        self.numEntries = 0
-        
-    def add(self, value):
-        removedVal = self.queue.popleft()
-        self.queue.append(value)
-        
-        if removedVal == -1:
-            self.sum = self.sum + value
-            self.numEntries = self.numEntries + 1
-        else:
-            self.sum = self.sum + value - removedVal
-        
-    def getAverage(self):
-        if(self.numEntries > 0):
-            return self.sum/self.numEntries
-        else:
-            return -1
-        
-class MovingAvgStd:
-    # Keeps track of mean and standard deviation
-    def __init__(self):
-        self.count = 0
-        self.mean = 0
-        self.std = 0
-        
-    def update(self, data):
-        origMean = self.mean
-        
-        self.count = self.count + 1
-        self.mean = origMean + (data - origMean)/self.count
-        if self.count > 2:
-            self.std = sqrt((((self.count - 2) * self.std * self.std) + ((data - origMean)*(data-self.mean)))/(self.count - 1))
-
-    def getMeanStd(self):
-        return (self.mean, self.std)
-    
-    def inRange(self, data, nrStd):
-        # For best results this should be checked before calling update
-        if self.count > 100:
-            return data <= self.mean + nrStd * self.std
-        else:
-            return True
-
 def enableDebug():
+    """ Enables debugging for the tracker
+    """
     global DEBUG
     DEBUG = True
     
