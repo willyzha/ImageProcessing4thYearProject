@@ -4,7 +4,7 @@ import CameraModule
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 
-class PiCam(CameraModule):
+class PiCam:
     def __init__(self, resolution):
         time.sleep(0.1)
         self.camera = PiCamera()
