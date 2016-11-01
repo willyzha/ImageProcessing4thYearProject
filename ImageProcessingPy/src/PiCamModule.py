@@ -3,17 +3,37 @@ import time
 import CameraModule
 from picamera.array import PiRGBArray
 from picamera import PiCamera
+from threading import Thread
 
 class PiCam:
     def __init__(self, resolution):
         time.sleep(0.1)
         self.camera = PiCamera()
         self.camera.resolution = resolution
+        self.camera.framerate = 32
+        self.rawCapture = PiRGBArray(self.camera, size=resolution)
+        self.stream = self.camera.capture_continuous(self.rawCapture, format="bgr", use_video_port=True)
+
+        self.frame = None
+        self.stopped = False
     
+    def start(self):
+        Thread(target=self.update, args=()).start()
+
+    def update(self):
+        for f in self.stream:
+            self.frame = f.array
+            self.rawCapture.truncate(0)
+            
+            if self.stopped:
+                self.stream.close()
+                self.rawCapture.close()
+                self.camera.close()
+                return
+
     def getFrame(self):
-        rawCapture = PiRGBArray(self.camera)
-        self.camera.capture(rawCapture, format="bgr", use_video_port=False)
-        
-        frame = rawCapture.array
-        
+        frame = self.frame        
         return (True, frame)
+
+    def close(self):
+        self.stopped = True
