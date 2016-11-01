@@ -12,7 +12,7 @@ class PiCam:
     
     def getFrame(self):
         rawCapture = PiRGBArray(self.camera)
-        self.camera.capture(rawCapture, format="bgr")
+        self.camera.capture(rawCapture, format="bgr", use_video_port=False)
         
         frame = rawCapture.array
         
