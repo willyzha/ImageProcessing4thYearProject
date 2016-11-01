@@ -6,3 +6,6 @@ class CameraModule:
         
     def getFrame(self):
         raise NotImplementedError("getFrame is an abstract method.")
+    
+    def release(self):
+        raise NotImplementedError("release function is an abstracted methodd")

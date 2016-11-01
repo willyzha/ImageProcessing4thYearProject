@@ -16,9 +16,11 @@ class PiCam:
 
         self.frame = None
         self.stopped = False
+        self.start()
     
     def start(self):
         Thread(target=self.update, args=()).start()
+        time.sleep(1)
 
     def update(self):
         for f in self.stream:
@@ -35,5 +37,6 @@ class PiCam:
         frame = self.frame        
         return (True, frame)
 
-    def close(self):
+    def release(self):
         self.stopped = True
+        time.sleep(1)
