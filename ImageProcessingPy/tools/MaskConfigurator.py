@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from ..src.PiCamModule import PiCamModule
 
 global Hmin, Smin, Vmin, Hmax, Smax, Vmax
 

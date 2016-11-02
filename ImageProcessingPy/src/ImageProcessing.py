@@ -100,8 +100,8 @@ def compareHist(frame, roiWindow, refHist):
     roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
    
     # Use the same mask from the original histogram generation
-    lowerb = np.array([39,40,90])
-    upperb = np.array([100,255,255])
+    lowerb = np.array([0,40,90])
+    upperb = np.array([255,255,255])
     mask  = getHSVMask(roi, lowerb, upperb)
     
     if DEBUG: # Write some the mask and ROI as .jpg files for debugging
@@ -279,7 +279,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
     
     #For matlab analysis
     #open("../../MatlabScripts/diff.txt", "w").close()
-
+    
     # keep looping over the frames
     while True:
         # grab the current frame
@@ -380,8 +380,8 @@ def processImage(resolution, avgFilterN, *cameraIn):
 
             # compute a HSV histogram for the ROI and store the
             # bounding box
-            lowerb = np.array([39,40,90])
-            upperb = np.array([100,255,255])
+            lowerb = np.array([0,40,90])
+            upperb = np.array([255,255,255])
             mask  = getHSVMask(roi, lowerb, upperb)
             modelHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
             modelHist = cv2.normalize(modelHist, modelHist, 0, 255, cv2.NORM_MINMAX)
