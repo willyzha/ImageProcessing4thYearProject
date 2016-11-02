@@ -302,7 +302,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
             print "Could not read from camera exiting..."
             break
 
-        outputFrame = frame.copy()
+        #outputFrame = frame.copy()
         
         # if the see if the ROI has been computed
         if roiBox is not None and modelHist is not None:
@@ -344,7 +344,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
                     avgCenterPoint = point(xPos, yPos, (255,0,0))
                     trueCenterPoint = point(center[0], center[1], (0,0,255))
                     
-                    drawOverlay(outputFrame,
+                    drawOverlay(frame,
                                 boxPts=pts,
                                 textToDraw=[avgPointText, errorText, diffText],
                                 pointsToDraw=[trueCenterPoint, avgCenterPoint])
@@ -365,13 +365,13 @@ def processImage(resolution, avgFilterN, *cameraIn):
         # show the frame and record if the user presses a key
         
         printTime(" Start showFrame: ")
-        drawOverlay(outputFrame, 
+        drawOverlay(frame, 
                     crossHair=(resolution[0]/2, resolution[1]/2, 10))
-        cv2.imshow("frame", outputFrame)
+        cv2.imshow("frame", frame)
         printTime(" End showFrame: ")
         
         if DEBUG:
-            cv2.imwrite("frame.jpg", outputFrame);
+            cv2.imwrite("frame.jpg", frame);
         
         key = cv2.waitKey(1) & 0xFF
 
