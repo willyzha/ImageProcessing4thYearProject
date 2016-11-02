@@ -3,7 +3,7 @@ import numpy as np
 import sys
 sys.path.append('../src')
 
-from WebcamModule import Webcam
+from PiCamModule import PiCam
 
 global Hmin, Smin, Vmin, Hmax, Smax, Vmax
 
@@ -43,7 +43,7 @@ def processImage():
     Smax = 255
     Vmax = 255
 
-    camera = Webcam(resolution=(640, 480))
+    camera = PiCam(resolution=(640, 480))
     
     # setup the mouse callback
     cv2.namedWindow("frame")
@@ -58,7 +58,7 @@ def processImage():
 
     # keep looping over the frames
     while True:
-        (grabbed, frame) = camera.getFrame()
+        (grabbed, frame) = camera.read()
         
         # check to see if we have reached the end of the
         # video
