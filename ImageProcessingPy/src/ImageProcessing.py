@@ -12,7 +12,7 @@ from math import sqrt
 roiPts = []
 inputMode = False
 DEBUG = False
-TIME_ANALYSIS = True
+TIME_ANALYSIS = False
 
 
 class AveragingFilter:
