@@ -14,6 +14,9 @@ inputMode = False
 DEBUG = False
 TIME_ANALYSIS = False
 
+LOWER_MASK_BOUND = np.array([0,40,90])
+UPPER_MASK_BOUND = np.array([255,255,255])
+
 
 class AveragingFilter:
     """ Calculates rolling average
@@ -106,9 +109,7 @@ def compareHist(frame, roiWindow, refHist):
     roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
    
     # Use the same mask from the original histogram generation
-    lowerb = np.array([0,40,90])
-    upperb = np.array([255,255,255])
-    mask  = getHSVMask(roi, lowerb, upperb)
+    mask  = getHSVMask(roi, LOWER_MASK_BOUND, UPPER_MASK_BOUND)
     
     if DEBUG: # Write some the mask and ROI as .jpg files for debugging
         cv2.imwrite("mask.jpg", mask)
@@ -170,11 +171,9 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
     
     # Mask to remove the low S and V values (white & black)
-    lowerb = np.array([0,40,90])
-    upperb = np.array([255,255,255])
-    mask = getHSVMask(hsv, lowerb, upperb)
+    #mask = getHSVMask(hsv, LOWER_MASK_BOUND, UPPER_MASK_BOUND)
     kernel = np.ones((3,3),np.uint8)
-    mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN, kernel)
+    #mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN, kernel)
     
     
     backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
@@ -200,7 +199,7 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     if DEBUG:
         roi = newBackProj[y:y+height, x:x+width]
         
-        cv2.imshow("mask", mask)
+        #cv2.imshow("mask", mask)
         cv2.imshow("backProj", backProj)
         cv2.imshow("newBackProj", newBackProj) 
         cv2.imshow("roi",roi)   
@@ -404,9 +403,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
 
             # compute a HSV histogram for the ROI and store the
             # bounding box
-            lowerb = np.array([0,40,90])
-            upperb = np.array([255,255,255])
-            mask  = getHSVMask(roi, lowerb, upperb)
+            mask  = getHSVMask(roi, LOWER_MASK_BOUND, UPPER_MASK_BOUND)
             modelHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
             modelHist = cv2.normalize(modelHist, modelHist, 0, 255, cv2.NORM_MINMAX)
             
