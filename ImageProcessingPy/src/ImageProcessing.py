@@ -14,6 +14,7 @@ inputMode = False
 DEBUG = False
 TIME_ANALYSIS = False
 
+# SELECT OPTIMIZED VALUES WITH MaskConfigurator or PiMaskConfigurator
 LOWER_MASK_BOUND = np.array([0,40,90])
 UPPER_MASK_BOUND = np.array([255,255,255])
 
