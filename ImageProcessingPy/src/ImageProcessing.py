@@ -4,6 +4,7 @@ import cv2
 from _collections import deque
 from collections import namedtuple
 import WebcamModule
+import time
 from math import sqrt
 
 # initialize the current frame of the video, along with the list of
@@ -11,6 +12,7 @@ from math import sqrt
 roiPts = []
 inputMode = False
 DEBUG = False
+TIME_ANALYSIS = True
 
 
 class AveragingFilter:
@@ -65,6 +67,10 @@ class RunningAvgStd:
             return data <= self.mean + nrStd * self.std
         else:
             return True
+
+def printTime(text):
+    if TIME_ANALYSIS:
+            print text + str(time.time())
 
 def selectROI(event, x, y, flags, param):
     """ Mouse call back function for selection initial ROI containing the target object
@@ -256,6 +262,8 @@ def processImage(resolution, avgFilterN, *cameraIn):
     """
     global roiPts, inputMode
 
+    printTime("Start processImage: ")
+
     # if camera is not passed in then use default webcam
     camera = None
     if cameraIn:
@@ -282,9 +290,12 @@ def processImage(resolution, avgFilterN, *cameraIn):
     
     # keep looping over the frames
     while True:
+        
+        printTime(" Start getFrame(): ")
+        
         # grab the current frame
         (grabbed, frame) = camera.getFrame()
-        
+        printTime(" End getFrame(): ")
         # check to see if we have reached the end of the
         # video
         if not grabbed:
@@ -295,15 +306,22 @@ def processImage(resolution, avgFilterN, *cameraIn):
         
         # if the see if the ROI has been computed
         if roiBox is not None and modelHist is not None:
+            printTime(" Start tracking: ")
             if not trackingLost:
-                (center, roiBoundingBox, roiBox, pts) = camShiftTracker(outputFrame, roiBox, modelHist)
-                diff = compareHist(frame, roiBoundingBox, modelHist)
+                printTime("  Start camShift: ")
+                (center, roiBoundingBox, roiBox, pts) = camShiftTracker(frame, roiBox, modelHist)
+                printTime("  End camShift: ")
                 
+                printTime("  Start compareHist: ")
+                diff = compareHist(frame, roiBoundingBox, modelHist)
                 lastArea = roiBoundingBox[2] * roiBoundingBox[3]
+                printTime("  End compareHist: ")
                 
                 if diff > 0.4:
                     trackingLost = True
                 else:
+                    printTime("  Start avgFilter: ")
+                    
                     #diffAvg.update(diff)
                     avgFilterX.add(center[0])
                     avgFilterY.add(center[1])
@@ -312,7 +330,8 @@ def processImage(resolution, avgFilterN, *cameraIn):
                     yPos = avgFilterY.getAverage()
                         
                     error = (resolution[0]/2-xPos, resolution[1]/2-yPos)
-                    
+                    printTime("  End avgFilter: ")
+                    printTime("  Start drawing: ")
                     text = namedtuple('text', ['text', 'origin', 'color'])
                     point = namedtuple('point', ['x', 'y', 'color'])
                                     
@@ -329,22 +348,27 @@ def processImage(resolution, avgFilterN, *cameraIn):
                                 boxPts=pts,
                                 textToDraw=[avgPointText, errorText, diffText],
                                 pointsToDraw=[trueCenterPoint, avgCenterPoint])
+                    printTime("  End drawing: ")
             else: #Tracking is lost therefore begin running redetectionAlg
+                printTime("  Start redetection: ")
                 redetectRoi = redetectionAlg(frame, modelHist, lastArea, 0.4)
+                printTime("  End redetection: ")
                 if redetectRoi is not None:
                     roiBox = redetectRoi
                     trackingLost = False
-            
-            
+
+            printTime(" End tracking: ")
             # For matlab analysis
             # fo = open("../../MatlabScripts/diff.txt", 'a')
             # fo.write(str(diff)+'\n')
             
         # show the frame and record if the user presses a key
-                
+        
+        printTime(" Start showFrame: ")
         drawOverlay(outputFrame, 
                     crossHair=(resolution[0]/2, resolution[1]/2, 10))
         cv2.imshow("frame", outputFrame)
+        printTime(" End showFrame: ")
         
         if DEBUG:
             cv2.imwrite("frame.jpg", outputFrame);
