@@ -18,6 +18,9 @@ TIME_ANALYSIS = False
 LOWER_MASK_BOUND = np.array([0,40,90])
 UPPER_MASK_BOUND = np.array([255,255,255])
 
+# ENABLE/DISABLE TRACKING HALTING AND REDETECTION
+RETECTION_ENABLED = False
+
 
 class AveragingFilter:
     """ Calculates rolling average
@@ -231,7 +234,6 @@ def redetectionAlg(aFrame, aRoiHist, aLastArea, aDiffThresh):
     # NOTE WZ: can try cv2.CHAIN_APPROX_NONE for no approximation
     _, contours, _ = cv2.findContours(maskedThresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    
     # Step4: Find candidate regions with appropriate size of 30%
     candidateContours = []
     for contour in contours:
@@ -317,7 +319,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
                 lastArea = roiBoundingBox[2] * roiBoundingBox[3]
                 printTime("  End compareHist: ")
                 
-                if diff > 0.4:
+                if diff > 0.4 and RETECTION_ENABLED:
                     trackingLost = True
                 else:
                     printTime("  Start avgFilter: ")
