@@ -42,7 +42,7 @@ def processImage():
     Hmax = 8
     Smax = 255
     Vmax = 255
-
+q
     camera = PiCam(resolution=(640, 480))
     
     # setup the mouse callback
@@ -58,7 +58,7 @@ def processImage():
 
     # keep looping over the frames
     while True:
-        (grabbed, frame) = camera.read()
+        (grabbed, frame) = camera.getFrame()
         
         # check to see if we have reached the end of the
         # video
@@ -86,6 +86,9 @@ def processImage():
             cv2.imwrite("mask.jpg", mask)
             print "Quitting..."
             break
+
+    camera.release()
+    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     processImage()
