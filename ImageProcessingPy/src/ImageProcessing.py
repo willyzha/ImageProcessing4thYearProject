@@ -371,7 +371,8 @@ def processImage(resolution, avgFilterN, *cameraIn):
         printTime(" Start showFrame: ")
         drawOverlay(frame, 
                     crossHair=(resolution[0]/2, resolution[1]/2, 10))
-        cv2.imshow("frame", frame)
+        
+        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
         printTime(" End showFrame: ")
         
         if DEBUG:
