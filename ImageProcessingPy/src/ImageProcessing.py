@@ -77,7 +77,7 @@ class RunningAvgStd:
 
 def printTime(text):
     if TIME_ANALYSIS:
-            print text + str(time.time())
+            print (text + str(time.time()))
 
 def selectROI(event, x, y, flags, param):
     """ Mouse call back function for selection initial ROI containing the target object
@@ -303,7 +303,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
         # check to see if we have reached the end of the
         # video
         if not grabbed:
-            print "Could not read from camera exiting..."
+            print ("Could not read from camera exiting...")
             break
 
         #outputFrame = frame.copy()
@@ -413,13 +413,13 @@ def processImage(resolution, avgFilterN, *cameraIn):
             modelHist = cv2.normalize(modelHist, modelHist, 0, 255, cv2.NORM_MINMAX)
             
             if DEBUG:
-                print modelHist
+                print (modelHist)
             
             roiBox = (tl[0], tl[1], br[0], br[1])
             cv2.setMouseCallback("frame", selectROI, None)
         # if the 'q' key is pressed, stop the loop
         elif key == ord("q"):
-            print "Quitting"
+            print ("Quitting")
             break
 
     # cleanup the camera and close any open windows
