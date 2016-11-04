@@ -42,7 +42,7 @@ def processImage():
     Hmax = 8
     Smax = 255
     Vmax = 255
-q
+
     camera = PiCam(resolution=(640, 480))
     
     # setup the mouse callback
