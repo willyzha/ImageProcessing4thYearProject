@@ -110,7 +110,7 @@ def compareHist(frame, roiWindow, refHist):
     """
     # Get the submatrix for the region of interest and convert to HSV
     roi = frame[roiWindow[1]:roiWindow[1]+roiWindow[3], roiWindow[0]:roiWindow[0]+roiWindow[2]]
-    roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
    
     # Use the same mask from the original histogram generation
     mask  = getHSVMask(roi, LOWER_MASK_BOUND, UPPER_MASK_BOUND)
@@ -172,7 +172,8 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     
     # convert the current aFrame to the HSV color space
     # and perform mean shift
-    hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
+    #hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
+    hsv = aFrame
     
     # Mask to remove the low S and V values (white & black)
     #mask = getHSVMask(hsv, LOWER_MASK_BOUND, UPPER_MASK_BOUND)
@@ -221,7 +222,8 @@ def redetectionAlg(aFrame, aRoiHist, aLastArea, aDiffThresh):
             matchedRect: Most probable rectangle around object. None if no matches were found
     """
     # Step1: Find HSV back projection of the frame
-    hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
+    #hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
+    hsv = aFrame
     backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
     
     # Step2: Binarize Back Projection
@@ -401,7 +403,7 @@ def processImage(resolution, avgFilterN, *cameraIn):
             # grab the ROI for the bounding box and convert it
             # to the HSV color space
             roi = orig[tl[1]:br[1], tl[0]:br[0]]
-            roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+            #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
             #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
 
             # compute a HSV histogram for the ROI and store the
