@@ -259,10 +259,14 @@ class ImageProcessor:
         self.avgFilterN = avgFilterN
         self.roiPts = []
         self.outputMode = "BGR"
+        self.showHistogram = False
+        self.modelHist = None
         
     def endImageProcessing(self):
         self.capturing = False
         self.roiPts = []
+        if not DEBUG:
+            cv2.destroyWindow("ModelHistogram")
         
     def quitImageProcessing(self):
         self.capturing = False
@@ -279,11 +283,20 @@ class ImageProcessor:
         else:
             raise Exception("Not a valid output configuration!!")
 
-    def setDebug(self, d):
+    def setDebugMode(self, d):
         """ Enables debugging for the tracker
         """
         global DEBUG
         DEBUG = d
+
+    def setShowHistogram(self, h):
+        self.showHistogram = h
+        if h:
+            if self.modelHist is not None:
+                cv2.imshow('ModelHistogram', HistogramPlotter.plotHsvHist(self.modelHist))
+        else:
+            cv2.destroyWindow('ModelHistogram')
+        
 
     def getDebug(self):
         return DEBUG
@@ -320,7 +333,6 @@ class ImageProcessor:
         cv2.namedWindow("frame")
     
         roiBox = None
-        modelHist = None
         
         avgFilterX = AveragingFilter(self.avgFilterN)
         avgFilterY = AveragingFilter(self.avgFilterN)
@@ -350,15 +362,15 @@ class ImageProcessor:
             #outputFrame = frame.copy()
             
             # if the see if the ROI has been computed
-            if roiBox is not None and modelHist is not None:
+            if roiBox is not None and self.modelHist is not None:
                 printTime(" Start tracking: ")
                 if not trackingLost:
                     printTime("  Start camShift: ")
-                    (center, roiBoundingBox, roiBox, pts) = camShiftTracker(frame, roiBox, modelHist)
+                    (center, roiBoundingBox, roiBox, pts) = camShiftTracker(frame, roiBox, self.modelHist)
                     printTime("  End camShift: ")
                     
                     printTime("  Start compareHist: ")
-                    diff = compareHist(frame, roiBoundingBox, modelHist)
+                    diff = compareHist(frame, roiBoundingBox, self.modelHist)
                     lastArea = roiBoundingBox[2] * roiBoundingBox[3]
                     printTime("  End compareHist: ")
                     
@@ -413,7 +425,7 @@ class ImageProcessor:
                         printTime(" End showFrame: ")
                 else: #Tracking is lost therefore begin running redetectionAlg
                     printTime("  Start redetection: ")
-                    redetectRoi = redetectionAlg(frame, modelHist, lastArea, 0.4)
+                    redetectRoi = redetectionAlg(frame, self.modelHist, lastArea, 0.4)
                     printTime("  End redetection: ")
                     if redetectRoi is not None:
                         roiBox = redetectRoi
@@ -452,7 +464,9 @@ class ImageProcessor:
                 # indicate that we are in input mode and clone the
                 # frame
                 inputMode = True
-    
+                
+                origFrame = frame.copy()
+                
                 # keep looping until 4 reference ROI points have
                 # been selected; press any key to exit ROI selction
                 # mode once 4 points have been selected
@@ -468,19 +482,19 @@ class ImageProcessor:
     
                 # grab the ROI for the bounding box and convert it
                 # to the HSV color space
-                roi = frame[tl[1]:br[1], tl[0]:br[0]]
+                roi = origFrame[tl[1]:br[1], tl[0]:br[0]]
                 #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
                 #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
     
                 # compute a HSV histogram for the ROI and store the
                 # bounding box
                 mask  = getHSVMask(roi, LOWER_MASK_BOUND, UPPER_MASK_BOUND)
-                modelHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
-                modelHist = cv2.normalize(modelHist, modelHist, 0, 255, cv2.NORM_MINMAX)
+                self.modelHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
+                self.modelHist = cv2.normalize(self.modelHist, self.modelHist, 0, 255, cv2.NORM_MINMAX)
                 
-                if DEBUG:
-                    print modelHist
-                    cv2.imshow('ModelHistogram', HistogramPlotter.plotHsvHist(modelHist))
+                if DEBUG or self.showHistogram:
+                    print self.modelHist
+                    cv2.imshow('ModelHistogram', HistogramPlotter.plotHsvHist(self.modelHist))
                 
                 roiBox = (tl[0], tl[1], br[0], br[1])
                 cv2.setMouseCallback("frame", self.selectROI, None)

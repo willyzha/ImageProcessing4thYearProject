@@ -36,10 +36,15 @@ class Window(QtGui.QWidget):
         debugCheckbox.setChecked(imgProcessor.getDebug())
         debugCheckbox.clicked.connect(lambda:self.changeDebugMode(debugCheckbox))
         
+        histCheckbox = QtGui.QCheckBox("Hist")
+        histCheckbox.setChecked(False)
+        histCheckbox.clicked.connect(lambda:self.changeHistMode(histCheckbox))
+        
         hbox = QtGui.QGridLayout(self.box2)
         hbox.addWidget(bBGR,0,0)
         hbox.addWidget(bHSV,0,1)
         hbox.addWidget(bNone,0,2)
+        hbox.addWidget(histCheckbox,1,0)
         hbox.addWidget(debugCheckbox,1,1)
         self.box2.setLayout(hbox)
         self.box2.setEnabled(False)
@@ -77,6 +82,9 @@ class Window(QtGui.QWidget):
         QtCore.QCoreApplication.quit()
         
     def changeDebugMode(self, cb):
-        self.imageProcessor.setDebug(cb.isChecked())
+        self.imageProcessor.setDebugMode(cb.isChecked())
+        
+    def changeHistMode(self, cb):
+        self.imageProcessor.setShowHistogram(cb.isChecked())
         
         
