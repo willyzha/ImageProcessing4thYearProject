@@ -275,9 +275,11 @@ class ImageProcessor:
     def setOutputMode(self, val):
         print val
         if val == "BGR":
-            self.outputMode = "BGR"            
-        elif val == "HSV":
-            self.outputMode = "HSV" 
+            self.outputMode = "BGR"
+        elif val == "HSVpure":
+            self.outputMode = "HSVpure"         
+        elif val == "HSVraw":
+            self.outputMode = "HSVraw" 
         elif val == "None":
             self.outputMode = "None" 
         else:
@@ -414,7 +416,11 @@ class ImageProcessor:
                         
                         if self.outputMode is "BGR":
                             cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
-                        elif self.outputMode is "HSV":
+                        elif self.outputMode is "HSVpure":
+                            frame[:,:,2] = 255
+                            frame[:,:,1] = 255
+                            cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
+                        elif self.outputMode is "HSVraw":
                             cv2.imshow("frame", frame)
                         elif self.outputMode is "None" and not DEBUG:
                             print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos)) + " diff=(" + '{0:.5f}'.format(diff)+")"
@@ -433,7 +439,11 @@ class ImageProcessor:
 
                     if self.outputMode is "BGR":
                         cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
-                    elif self.outputMode is "HSV":
+                    elif self.outputMode is "HSVpure":
+                        frame[:,:,2] = 255
+                        frame[:,:,1] = 255
+                        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
+                    elif self.outputMode is "HSVraw":
                         cv2.imshow("frame", frame)
                     elif self.outputMode is "None":
                         print "TRACKING LOST " + str(trackingLost)
@@ -447,7 +457,11 @@ class ImageProcessor:
             else:
                 if self.outputMode is "BGR":
                     cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
-                elif self.outputMode is "HSV":
+                elif self.outputMode is "HSVpure":
+                    frame[:,:,2] = 255
+                    frame[:,:,1] = 255
+                    cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
+                elif self.outputMode is "HSVraw":
                     cv2.imshow("frame", frame)
                 elif self.outputMode is "None":
                     print "Tracking Off. Press 'i' to initiate."

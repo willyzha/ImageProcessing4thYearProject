@@ -26,8 +26,11 @@ class Window(QtGui.QWidget):
         bBGR = QtGui.QPushButton("BGR", self.box2)
         bBGR.clicked.connect(lambda:self.outputConfig(bBGR))
         
-        bHSV = QtGui.QPushButton("HSV", self.box2)
-        bHSV.clicked.connect(lambda:self.outputConfig(bHSV))
+        bHSVpure = QtGui.QPushButton("HSVpure", self.box2)
+        bHSVpure.clicked.connect(lambda:self.outputConfig(bHSVpure))
+        
+        bHSVraw = QtGui.QPushButton("HSVraw", self.box2)
+        bHSVraw.clicked.connect(lambda:self.outputConfig(bHSVraw))
         
         bNone = QtGui.QPushButton("None", self.box2)
         bNone.clicked.connect(lambda:self.outputConfig(bNone))
@@ -42,8 +45,9 @@ class Window(QtGui.QWidget):
         
         hbox = QtGui.QGridLayout(self.box2)
         hbox.addWidget(bBGR,0,0)
-        hbox.addWidget(bHSV,0,1)
-        hbox.addWidget(bNone,0,2)
+        hbox.addWidget(bHSVpure,0,1)
+        hbox.addWidget(bHSVraw,0,2)
+        hbox.addWidget(bNone,0,3)
         hbox.addWidget(histCheckbox,1,0)
         hbox.addWidget(debugCheckbox,1,1)
         self.box2.setLayout(hbox)
