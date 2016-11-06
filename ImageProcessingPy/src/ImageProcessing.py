@@ -402,7 +402,7 @@ class ImageProcessor:
                         elif self.outputMode is "HSV":
                             cv2.imshow("frame", frame)
                         elif self.outputMode is "None":
-                            print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos))
+                            print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos)) + " diff=(" + '{0:.5f}'.format(diff)+")"
                                     
                         printTime(" End showFrame: ")
                 else: #Tracking is lost therefore begin running redetectionAlg
