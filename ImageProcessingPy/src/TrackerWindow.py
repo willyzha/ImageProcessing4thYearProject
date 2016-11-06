@@ -32,10 +32,15 @@ class Window(QtGui.QWidget):
         bNone = QtGui.QPushButton("None", self.box2)
         bNone.clicked.connect(lambda:self.outputConfig(bNone))
         
-        hbox = QtGui.QHBoxLayout(self.box2)
-        hbox.addWidget(bBGR)
-        hbox.addWidget(bHSV)
-        hbox.addWidget(bNone)
+        debugCheckbox = QtGui.QCheckBox("Debug")
+        debugCheckbox.setChecked(imgProcessor.getDebug())
+        debugCheckbox.clicked.connect(lambda:self.changeDebugMode(debugCheckbox))
+        
+        hbox = QtGui.QGridLayout(self.box2)
+        hbox.addWidget(bBGR,0,0)
+        hbox.addWidget(bHSV,0,1)
+        hbox.addWidget(bNone,0,2)
+        hbox.addWidget(debugCheckbox,1,1)
         self.box2.setLayout(hbox)
         self.box2.setEnabled(False)
 
@@ -70,4 +75,8 @@ class Window(QtGui.QWidget):
         print "quitCapture"
         self.imageProcessor.quitImageProcessing()
         QtCore.QCoreApplication.quit()
+        
+    def changeDebugMode(self, cb):
+        print cb.checkState()
+        
         

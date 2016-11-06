@@ -250,12 +250,6 @@ def redetectionAlg(aFrame, aRoiHist, aLastArea, aDiffThresh):
 
     return matchedRect
 
-def enableDebug():
-    """ Enables debugging for the tracker
-    """
-    global DEBUG
-    DEBUG = True
-
 class ImageProcessor:
     def __init__(self, cameraModule, res, avgFilterN):
         self.capturing = False
@@ -284,6 +278,14 @@ class ImageProcessor:
         else:
             raise Exception("Not a valid output configuration!!")
 
+    def setDebug(self, d):
+        """ Enables debugging for the tracker
+        """
+        global DEBUG
+        DEBUG = d
+
+    def getDebug(self):
+        return DEBUG
 
     def selectROI(self, event, x, y, flags, param):
         """ Mouse call back function for selection initial ROI containing the target object
@@ -432,7 +434,7 @@ class ImageProcessor:
                 elif self.outputMode is "HSV":
                     cv2.imshow("frame", frame)
                 elif self.outputMode is "None":
-                    print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos))
+                    print "Tracking Off. Press 'i' to initiate."
 
             
             if DEBUG:
@@ -498,9 +500,7 @@ if __name__ == "__main__":
     avgFilterN = args.avgFilterN
     resolution = args.res
     
-    if debug:
-        enableDebug()
-    
     camera = Webcam(resolution)    
-    processer = ImageProcessor(camera, resolution, avgFilterN)
-    processer.processImage()
+    processor = ImageProcessor(camera, resolution, avgFilterN)
+    processor.setDebug(debug)
+    processor.processImage()
