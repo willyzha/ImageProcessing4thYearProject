@@ -274,11 +274,12 @@ class ImageProcessor:
         self.camera.release()
         
     def setOutputMode(self, val):
-        if val is "BGR":
+        print val
+        if val == "BGR":
             self.outputMode = "BGR"            
-        elif val is "HSV":
+        elif val == "HSV":
             self.outputMode = "HSV" 
-        elif val is "None":
+        elif val == "None":
             self.outputMode = "None" 
         else:
             raise Exception("Not a valid output configuration!!")
@@ -293,8 +294,8 @@ class ImageProcessor:
         # and draw the circle
         if inputMode and event == cv2.EVENT_LBUTTONDOWN and len(self.roiPts) < 4:
             self.roiPts.append((x, y))
-            cv2.circle(param, (x, y), 4, (0, 255, 0), 2)
-            cv2.imshow("frame", param)
+            cv2.circle(param, (x, y), 4, (60,255,255), 2)
+            cv2.imshow("frame", cv2.cvtColor(param,cv2.COLOR_HSV2BGR))
 
     def processImage(self):
         """ Main Loop Function for Tracking
@@ -409,8 +410,13 @@ class ImageProcessor:
             drawOverlay(frame, 
                         crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10))
             
-            
-            cv2.imshow("frame", frame)
+            if self.outputMode is "BGR":
+                cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
+            elif self.outputMode is "HSV":
+                cv2.imshow("frame", frame)
+            elif self.outputMode is "None":
+                print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos))
+                        
             printTime(" End showFrame: ")
             
             if DEBUG:
@@ -424,7 +430,6 @@ class ImageProcessor:
                 # indicate that we are in input mode and clone the
                 # frame
                 inputMode = True
-                orig = frame.copy()
     
                 # keep looping until 4 reference ROI points have
                 # been selected; press any key to exit ROI selction
@@ -441,8 +446,8 @@ class ImageProcessor:
     
                 # grab the ROI for the bounding box and convert it
                 # to the HSV color space
-                roi = orig[tl[1]:br[1], tl[0]:br[0]]
-                roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                roi = frame[tl[1]:br[1], tl[0]:br[0]]
+                #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
                 #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
     
                 # compute a HSV histogram for the ROI and store the
