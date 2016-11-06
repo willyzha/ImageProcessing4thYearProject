@@ -4,6 +4,7 @@ import CameraModule
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 from threading import Thread
+import cv2
 
 class PiCam:
     def __init__(self, resolution):
@@ -24,7 +25,7 @@ class PiCam:
 
     def update(self):
         for f in self.stream:
-            self.frame = f.array
+            self.frame = cv2.cvtColor(f.array, cv2.COLOR_BGR2HSV)
             self.rawCapture.truncate(0)
             
             if self.stopped:
