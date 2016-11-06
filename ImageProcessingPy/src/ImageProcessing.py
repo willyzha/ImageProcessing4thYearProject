@@ -120,8 +120,8 @@ def compareHist(frame, roiWindow, refHist):
 def drawCrossHair(frame, x, y, size):
     """ Draw a cross hair
     """
-    cv2.line(frame, (x+size, y),(x-size,y),color=(0,0,255),thickness=1)
-    cv2.line(frame, (x, y+size),(x,y-size),color=(0,0,255),thickness=1)
+    cv2.line(frame, (x+size, y),(x-size,y),color=(0,255,255),thickness=1)
+    cv2.line(frame, (x, y+size),(x,y-size),color=(0,255,255),thickness=1)
 
 def drawOverlay(targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsToDraw=[]):
     """ Draws crossHair, boxes, text and points on the targetFrame
@@ -131,7 +131,7 @@ def drawOverlay(targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsTo
         drawCrossHair(targetFrame, crossHair[0], crossHair[1], crossHair[2])
     
     if boxPts is not None:
-        cv2.polylines(targetFrame, [boxPts], True, (0, 255, 0), 2)   
+        cv2.polylines(targetFrame, [boxPts], True, (60, 255, 255), 2)   
     
     for text in textToDraw:
         cv2.putText(targetFrame, text=text.text, org=text.origin, 
@@ -376,15 +376,16 @@ class ImageProcessor:
                         printTime("  Start drawing: ")
                         text = namedtuple('text', ['text', 'origin', 'color'])
                         point = namedtuple('point', ['x', 'y', 'color'])
-                                        
-                        avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (255,0,0))
-                        errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,self.resolution[1]-10), (255,0,0))
-                        diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,self.resolution[1]-10), (255,0,0))
+                        
+                        # HUE: RED=0 -- GREEN=60 -- BLUE=120
+                        avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (120,0,0))
+                        errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,self.resolution[1]-10), (0,255,0))
+                        diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,self.resolution[1]-10), (0,255,0))
                         #stdText = text("mean,std=("+'{0:.5f}'.format(diffAvg.getMeanStd()[0]) + "," +'{0:.5f}'.format(diffAvg.getMeanStd()[1]) + ")", 
                         #                (275,resolution[1]-10), (255,0,0))
                         
-                        avgCenterPoint = point(xPos, yPos, (255,0,0))
-                        trueCenterPoint = point(center[0], center[1], (0,0,255))
+                        avgCenterPoint = point(xPos, yPos, (120,0,0))
+                        trueCenterPoint = point(center[0], center[1], (0,255,255))
                         
                         drawOverlay(frame,
                                     boxPts=pts,
