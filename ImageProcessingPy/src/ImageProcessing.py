@@ -3,13 +3,12 @@ import argparse
 import cv2
 from _collections import deque
 from collections import namedtuple
-import WebcamModule
+from WebcamModule import Webcam
 import time
 from math import sqrt
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
-roiPts = []
 inputMode = False
 DEBUG = False
 TIME_ANALYSIS = False
@@ -21,6 +20,8 @@ UPPER_MASK_BOUND = np.array([255,255,255])
 # ENABLE/DISABLE TRACKING HALTING AND REDETECTION
 RETECTION_ENABLED = False
 
+def buttonPress(event):
+    print event
 
 class AveragingFilter:
     """ Calculates rolling average
@@ -78,18 +79,6 @@ class RunningAvgStd:
 def printTime(text):
     if TIME_ANALYSIS:
             print text + str(time.time())
-
-def selectROI(event, x, y, flags, param):
-    """ Mouse call back function for selection initial ROI containing the target object
-    """
-    # if we are in ROI selection mode, the mouse was clicked,
-    # and we do not already have four points, then update the
-    # list of ROI points with the (x, y) location of the click
-    # and draw the circle
-    if inputMode and event == cv2.EVENT_LBUTTONDOWN and len(roiPts) < 4:
-        roiPts.append((x, y))
-        cv2.circle(param, (x, y), 4, (0, 255, 0), 2)
-        cv2.imshow("frame", param)
 
 def getHSVMask(frame, lowerb, upperb):
     """ Finds the HSV mask for the input frame given a lower bound and upper bound
@@ -259,177 +248,207 @@ def redetectionAlg(aFrame, aRoiHist, aLastArea, aDiffThresh):
 
     return matchedRect
 
-def processImage(resolution, avgFilterN, *cameraIn):
-    """ Main Loop Function for Tracking
-    """
-    global roiPts, inputMode
-
-    printTime("Start processImage: ")
-
-    # if camera is not passed in then use default webcam
-    camera = None
-    if cameraIn:
-        camera = cameraIn[0]
-    else:
-        camera = WebcamModule.Webcam(resolution)    
-
-    # setup the mouse callback
-    cv2.namedWindow("frame")
-
-    roiBox = None
-    modelHist = None
-    
-    avgFilterX = AveragingFilter(avgFilterN)
-    avgFilterY = AveragingFilter(avgFilterN)
-    
-    trackingLost = False
-    lastArea = 0
-
-    #diffAvg = RunningAvgStd()
-    
-    #For matlab analysis
-    #open("../../MatlabScripts/diff.txt", "w").close()
-    
-    # keep looping over the frames
-    while True:
-        
-        printTime(" Start getFrame(): ")
-        
-        # grab the current frame
-        (grabbed, frame) = camera.getFrame()
-        printTime(" End getFrame(): ")
-        # check to see if we have reached the end of the
-        # video
-        if not grabbed:
-            print "Could not read from camera exiting..."
-            break
-
-        #outputFrame = frame.copy()
-        
-        # if the see if the ROI has been computed
-        if roiBox is not None and modelHist is not None:
-            printTime(" Start tracking: ")
-            if not trackingLost:
-                printTime("  Start camShift: ")
-                (center, roiBoundingBox, roiBox, pts) = camShiftTracker(frame, roiBox, modelHist)
-                printTime("  End camShift: ")
-                
-                printTime("  Start compareHist: ")
-                diff = compareHist(frame, roiBoundingBox, modelHist)
-                lastArea = roiBoundingBox[2] * roiBoundingBox[3]
-                printTime("  End compareHist: ")
-                
-                if diff > 0.4 and RETECTION_ENABLED:
-                    trackingLost = True
-                else:
-                    printTime("  Start avgFilter: ")
-                    
-                    #diffAvg.update(diff)
-                    avgFilterX.add(center[0])
-                    avgFilterY.add(center[1])
-                    
-                    xPos = avgFilterX.getAverage()
-                    yPos = avgFilterY.getAverage()
-                        
-                    error = (resolution[0]/2-xPos, resolution[1]/2-yPos)
-                    printTime("  End avgFilter: ")
-                    printTime("  Start drawing: ")
-                    text = namedtuple('text', ['text', 'origin', 'color'])
-                    point = namedtuple('point', ['x', 'y', 'color'])
-                                    
-                    avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (255,0,0))
-                    errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,resolution[1]-10), (255,0,0))
-                    diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,resolution[1]-10), (255,0,0))
-                    #stdText = text("mean,std=("+'{0:.5f}'.format(diffAvg.getMeanStd()[0]) + "," +'{0:.5f}'.format(diffAvg.getMeanStd()[1]) + ")", 
-                    #                (275,resolution[1]-10), (255,0,0))
-                    
-                    avgCenterPoint = point(xPos, yPos, (255,0,0))
-                    trueCenterPoint = point(center[0], center[1], (0,0,255))
-                    
-                    drawOverlay(frame,
-                                boxPts=pts,
-                                textToDraw=[avgPointText, errorText, diffText],
-                                pointsToDraw=[trueCenterPoint, avgCenterPoint])
-                    printTime("  End drawing: ")
-            else: #Tracking is lost therefore begin running redetectionAlg
-                printTime("  Start redetection: ")
-                redetectRoi = redetectionAlg(frame, modelHist, lastArea, 0.4)
-                printTime("  End redetection: ")
-                if redetectRoi is not None:
-                    roiBox = redetectRoi
-                    trackingLost = False
-
-            printTime(" End tracking: ")
-            # For matlab analysis
-            # fo = open("../../MatlabScripts/diff.txt", 'a')
-            # fo.write(str(diff)+'\n')
-            
-        # show the frame and record if the user presses a key
-        
-        printTime(" Start showFrame: ")
-        drawOverlay(frame, 
-                    crossHair=(resolution[0]/2, resolution[1]/2, 10))
-        cv2.imshow("frame", frame)
-        printTime(" End showFrame: ")
-        
-        if DEBUG:
-            cv2.imwrite("frame.jpg", frame);
-        
-        key = cv2.waitKey(1) & 0xFF
-
-        # handle if the 'i' key is pressed, then go into ROI
-        # selection mode
-        if key == ord("i") and len(roiPts) < 4:
-            # indicate that we are in input mode and clone the
-            # frame
-            inputMode = True
-            orig = frame.copy()
-
-            # keep looping until 4 reference ROI points have
-            # been selected; press any key to exit ROI selction
-            # mode once 4 points have been selected
-            while len(roiPts) < 4:
-                cv2.setMouseCallback("frame", selectROI, frame)
-                cv2.waitKey(0)
-
-            # determine the top-left and bottom-right points
-            roiPts = np.array(roiPts)
-            s = roiPts.sum(axis = 1)
-            tl = roiPts[np.argmin(s)]
-            br = roiPts[np.argmax(s)]
-
-            # grab the ROI for the bounding box and convert it
-            # to the HSV color space
-            roi = orig[tl[1]:br[1], tl[0]:br[0]]
-            roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-            #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
-
-            # compute a HSV histogram for the ROI and store the
-            # bounding box
-            mask  = getHSVMask(roi, LOWER_MASK_BOUND, UPPER_MASK_BOUND)
-            modelHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
-            modelHist = cv2.normalize(modelHist, modelHist, 0, 255, cv2.NORM_MINMAX)
-            
-            if DEBUG:
-                print modelHist
-            
-            roiBox = (tl[0], tl[1], br[0], br[1])
-            cv2.setMouseCallback("frame", selectROI, None)
-        # if the 'q' key is pressed, stop the loop
-        elif key == ord("q"):
-            print "Quitting"
-            break
-
-    # cleanup the camera and close any open windows
-    camera.release()
-    cv2.destroyAllWindows()
-
 def enableDebug():
     """ Enables debugging for the tracker
     """
     global DEBUG
     DEBUG = True
+
+class ImageProcessor:
+    def __init__(self, cameraModule, res, avgFilterN):
+        self.capturing = False
+        self.camera = cameraModule
+        self.resolution = res
+        self.avgFilterN = avgFilterN
+        self.roiPts = []
+        
+    def endImageProcessing(self):
+        self.capturing = False
+        self.roiPts = []
+        
+    def quitImageProcessing(self):
+        self.capturing = False
+        self.camera.release()
+
+    def selectROI(self, event, x, y, flags, param):
+        """ Mouse call back function for selection initial ROI containing the target object
+        """
+        # if we are in ROI selection mode, the mouse was clicked,
+        # and we do not already have four points, then update the
+        # list of ROI points with the (x, y) location of the click
+        # and draw the circle
+        if inputMode and event == cv2.EVENT_LBUTTONDOWN and len(self.roiPts) < 4:
+            self.roiPts.append((x, y))
+            cv2.circle(param, (x, y), 4, (0, 255, 0), 2)
+            cv2.imshow("frame", param)
+
+    def processImage(self):
+        """ Main Loop Function for Tracking
+        """
+        global inputMode
+        
+        self.capturing = True
+        
+        printTime("Start processImage: ")
     
+        # if camera is not passed in then use default webcam
+#         camera = None
+#         if cameraIn:
+#             camera = cameraIn[0]
+#         else:
+#             camera = WebcamModule.Webcam(resolution)    
+    
+        # setup the mouse callback
+        cv2.namedWindow("frame")
+    
+        roiBox = None
+        modelHist = None
+        
+        avgFilterX = AveragingFilter(self.avgFilterN)
+        avgFilterY = AveragingFilter(self.avgFilterN)
+        
+        trackingLost = False
+        lastArea = 0
+    
+        #diffAvg = RunningAvgStd()
+        
+        #For matlab analysis
+        #open("../../MatlabScripts/diff.txt", "w").close()
+        
+        # keep looping over the frames
+        while self.capturing:
+            
+            printTime(" Start getFrame(): ")
+            
+            # grab the current frame
+            (grabbed, frame) = self.camera.getFrame()
+            printTime(" End getFrame(): ")
+            # check to see if we have reached the end of the
+            # video
+            if not grabbed:
+                print "Could not read from camera exiting..."
+                break
+    
+            #outputFrame = frame.copy()
+            
+            # if the see if the ROI has been computed
+            if roiBox is not None and modelHist is not None:
+                printTime(" Start tracking: ")
+                if not trackingLost:
+                    printTime("  Start camShift: ")
+                    (center, roiBoundingBox, roiBox, pts) = camShiftTracker(frame, roiBox, modelHist)
+                    printTime("  End camShift: ")
+                    
+                    printTime("  Start compareHist: ")
+                    diff = compareHist(frame, roiBoundingBox, modelHist)
+                    lastArea = roiBoundingBox[2] * roiBoundingBox[3]
+                    printTime("  End compareHist: ")
+                    
+                    if diff > 0.4 and RETECTION_ENABLED:
+                        trackingLost = True
+                    else:
+                        printTime("  Start avgFilter: ")
+                        
+                        #diffAvg.update(diff)
+                        avgFilterX.add(center[0])
+                        avgFilterY.add(center[1])
+                        
+                        xPos = avgFilterX.getAverage()
+                        yPos = avgFilterY.getAverage()
+                            
+                        error = (self.resolution[0]/2-xPos, self.resolution[1]/2-yPos)
+                        printTime("  End avgFilter: ")
+                        printTime("  Start drawing: ")
+                        text = namedtuple('text', ['text', 'origin', 'color'])
+                        point = namedtuple('point', ['x', 'y', 'color'])
+                                        
+                        avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (255,0,0))
+                        errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,self.resolution[1]-10), (255,0,0))
+                        diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,self.resolution[1]-10), (255,0,0))
+                        #stdText = text("mean,std=("+'{0:.5f}'.format(diffAvg.getMeanStd()[0]) + "," +'{0:.5f}'.format(diffAvg.getMeanStd()[1]) + ")", 
+                        #                (275,resolution[1]-10), (255,0,0))
+                        
+                        avgCenterPoint = point(xPos, yPos, (255,0,0))
+                        trueCenterPoint = point(center[0], center[1], (0,0,255))
+                        
+                        drawOverlay(frame,
+                                    boxPts=pts,
+                                    textToDraw=[avgPointText, errorText, diffText],
+                                    pointsToDraw=[trueCenterPoint, avgCenterPoint])
+                        printTime("  End drawing: ")
+                else: #Tracking is lost therefore begin running redetectionAlg
+                    printTime("  Start redetection: ")
+                    redetectRoi = redetectionAlg(frame, modelHist, lastArea, 0.4)
+                    printTime("  End redetection: ")
+                    if redetectRoi is not None:
+                        roiBox = redetectRoi
+                        trackingLost = False
+    
+                printTime(" End tracking: ")
+                # For matlab analysis
+                # fo = open("../../MatlabScripts/diff.txt", 'a')
+                # fo.write(str(diff)+'\n')
+                
+            # show the frame and record if the user presses a key
+            
+            printTime(" Start showFrame: ")
+            drawOverlay(frame, 
+                        crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10))
+            cv2.imshow("frame", frame)
+            printTime(" End showFrame: ")
+            
+            if DEBUG:
+                cv2.imwrite("frame.jpg", frame);
+            
+            key = cv2.waitKey(1) & 0xFF
+    
+            # handle if the 'i' key is pressed, then go into ROI
+            # selection mode
+            if key == ord("i") and len(self.roiPts) < 4:
+                # indicate that we are in input mode and clone the
+                # frame
+                inputMode = True
+                orig = frame.copy()
+    
+                # keep looping until 4 reference ROI points have
+                # been selected; press any key to exit ROI selction
+                # mode once 4 points have been selected
+                while len(self.roiPts) < 4:
+                    cv2.setMouseCallback("frame", self.selectROI, frame)
+                    cv2.waitKey(0)
+    
+                # determine the top-left and bottom-right points
+                roiPts = np.array(self.roiPts)
+                s = roiPts.sum(axis = 1)
+                tl = roiPts[np.argmin(s)]
+                br = roiPts[np.argmax(s)]
+    
+                # grab the ROI for the bounding box and convert it
+                # to the HSV color space
+                roi = orig[tl[1]:br[1], tl[0]:br[0]]
+                roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+                #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
+    
+                # compute a HSV histogram for the ROI and store the
+                # bounding box
+                mask  = getHSVMask(roi, LOWER_MASK_BOUND, UPPER_MASK_BOUND)
+                modelHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
+                modelHist = cv2.normalize(modelHist, modelHist, 0, 255, cv2.NORM_MINMAX)
+                
+                if DEBUG:
+                    print modelHist
+                
+                roiBox = (tl[0], tl[1], br[0], br[1])
+                cv2.setMouseCallback("frame", self.selectROI, None)
+            # if the 'q' key is pressed, stop the loop
+            elif key == ord("q"):
+                #print "Quitting"
+                break
+    
+        # cleanup the camera and close any open windows
+        #self.camera.release()
+        cv2.destroyWindow("frame")
+   
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Perform Camshift Tracking.\nUsage: \t"i" to select ROI\n\t"q" to exit' , formatter_class=argparse.RawTextHelpFormatter)
     
@@ -444,6 +463,7 @@ if __name__ == "__main__":
     
     if debug:
         enableDebug()
-            
-    processImage(resolution, avgFilterN)
     
+    camera = Webcam(resolution)    
+    processer = ImageProcessor(camera, resolution, avgFilterN)
+    processer.processImage()
