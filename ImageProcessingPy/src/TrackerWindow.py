@@ -77,6 +77,6 @@ class Window(QtGui.QWidget):
         QtCore.QCoreApplication.quit()
         
     def changeDebugMode(self, cb):
-        print cb.checkState()
+        self.imageProcessor.setDebug(cb.isChecked())
         
         

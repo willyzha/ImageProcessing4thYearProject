@@ -6,6 +6,7 @@ from collections import namedtuple
 from WebcamModule import Webcam
 import time
 from math import sqrt
+import HistogramPlotter
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -403,7 +404,10 @@ class ImageProcessor:
                             cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
                         elif self.outputMode is "HSV":
                             cv2.imshow("frame", frame)
-                        elif self.outputMode is "None":
+                        elif self.outputMode is "None" and not DEBUG:
+                            print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos)) + " diff=(" + '{0:.5f}'.format(diff)+")"
+                            
+                        if DEBUG:
                             print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos)) + " diff=(" + '{0:.5f}'.format(diff)+")"
                                     
                         printTime(" End showFrame: ")
@@ -476,6 +480,7 @@ class ImageProcessor:
                 
                 if DEBUG:
                     print modelHist
+                    cv2.imshow('ModelHistogram', HistogramPlotter.plotHsvHist(modelHist))
                 
                 roiBox = (tl[0], tl[1], br[0], br[1])
                 cv2.setMouseCallback("frame", self.selectROI, None)
