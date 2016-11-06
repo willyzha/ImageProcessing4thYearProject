@@ -261,6 +261,7 @@ class ImageProcessor:
         self.resolution = res
         self.avgFilterN = avgFilterN
         self.roiPts = []
+        self.outputMode = "BGR"
         
     def endImageProcessing(self):
         self.capturing = False
@@ -269,6 +270,17 @@ class ImageProcessor:
     def quitImageProcessing(self):
         self.capturing = False
         self.camera.release()
+        
+    def setOutputMode(self, val):
+        if val is "BGR":
+            self.outputMode = "BGR"            
+        elif val is "HSV":
+            self.outputMode = "HSV" 
+        elif val is "None":
+            self.outputMode = "None" 
+        else:
+            raise Exception("Not a valid output configuration!!")
+
 
     def selectROI(self, event, x, y, flags, param):
         """ Mouse call back function for selection initial ROI containing the target object
@@ -394,6 +406,8 @@ class ImageProcessor:
             printTime(" Start showFrame: ")
             drawOverlay(frame, 
                         crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10))
+            
+            
             cv2.imshow("frame", frame)
             printTime(" End showFrame: ")
             

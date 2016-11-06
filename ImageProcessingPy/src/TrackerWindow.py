@@ -22,8 +22,26 @@ class Window(QtGui.QWidget):
         self.quit_button.setEnabled(True)
         self.quit_button.clicked.connect(self.quitCapture)
 
+        self.box2 = QtGui.QWidget()
+        bBGR = QtGui.QPushButton("BGR", self.box2)
+        bBGR.clicked.connect(lambda:self.outputConfig(bBGR))
+        
+        bHSV = QtGui.QPushButton("HSV", self.box2)
+        bHSV.clicked.connect(lambda:self.outputConfig(bHSV))
+        
+        bNone = QtGui.QPushButton("None", self.box2)
+        bNone.clicked.connect(lambda:self.outputConfig(bNone))
+        
+        hbox = QtGui.QHBoxLayout(self.box2)
+        hbox.addWidget(bBGR)
+        hbox.addWidget(bHSV)
+        hbox.addWidget(bNone)
+        self.box2.setLayout(hbox)
+        self.box2.setEnabled(False)
+
         vbox = QtGui.QVBoxLayout(self)
         vbox.addWidget(self.start_button)
+        vbox.addWidget(self.box2)
         vbox.addWidget(self.end_button)
         vbox.addWidget(self.quit_button)
 
@@ -35,12 +53,17 @@ class Window(QtGui.QWidget):
         print "startCapture"
         self.start_button.setEnabled(False)
         self.end_button.setEnabled(True)
+        self.box2.setEnabled(True)
         self.imageProcessor.processImage()
+        
+    def outputConfig(self, b):
+        self.imageProcessor.setOutputMode(b.text())
         
     def endCapture(self):
         print "endCapture"
         self.end_button.setEnabled(False)
         self.start_button.setEnabled(True)
+        self.box2.setEnabled(False)
         self.imageProcessor.endImageProcessing()
         
     def quitCapture(self):
