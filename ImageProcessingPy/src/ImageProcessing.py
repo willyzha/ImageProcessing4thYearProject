@@ -392,6 +392,19 @@ class ImageProcessor:
                                     textToDraw=[avgPointText, errorText, diffText],
                                     pointsToDraw=[trueCenterPoint, avgCenterPoint])
                         printTime("  End drawing: ")
+                        
+                        printTime(" Start showFrame: ")
+                        drawOverlay(frame, 
+                                    crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10))
+                        
+                        if self.outputMode is "BGR":
+                            cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
+                        elif self.outputMode is "HSV":
+                            cv2.imshow("frame", frame)
+                        elif self.outputMode is "None":
+                            print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos))
+                                    
+                        printTime(" End showFrame: ")
                 else: #Tracking is lost therefore begin running redetectionAlg
                     printTime("  Start redetection: ")
                     redetectRoi = redetectionAlg(frame, modelHist, lastArea, 0.4)
@@ -399,6 +412,13 @@ class ImageProcessor:
                     if redetectRoi is not None:
                         roiBox = redetectRoi
                         trackingLost = False
+
+                    if self.outputMode is "BGR":
+                        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
+                    elif self.outputMode is "HSV":
+                        cv2.imshow("frame", frame)
+                    elif self.outputMode is "None":
+                        print "TRACKING LOST " + str(trackingLost)
     
                 printTime(" End tracking: ")
                 # For matlab analysis
@@ -406,19 +426,14 @@ class ImageProcessor:
                 # fo.write(str(diff)+'\n')
                 
             # show the frame and record if the user presses a key
+            else:
+                if self.outputMode is "BGR":
+                    cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
+                elif self.outputMode is "HSV":
+                    cv2.imshow("frame", frame)
+                elif self.outputMode is "None":
+                    print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos))
 
-            printTime(" Start showFrame: ")
-            drawOverlay(frame, 
-                        crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10))
-            
-            if self.outputMode is "BGR":
-                cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
-            elif self.outputMode is "HSV":
-                cv2.imshow("frame", frame)
-            elif self.outputMode is "None":
-                print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos))
-                        
-            printTime(" End showFrame: ")
             
             if DEBUG:
                 cv2.imwrite("frame.jpg", frame);
