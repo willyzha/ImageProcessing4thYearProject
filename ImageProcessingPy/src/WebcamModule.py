@@ -8,8 +8,8 @@ class Webcam(CameraModule):
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
         
     def getFrame(self):
-    	grabbed, frame = self.camera.read()
-    	hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        grabbed, frame = self.camera.read()
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         return (grabbed, hsv)
     
     def release(self):
