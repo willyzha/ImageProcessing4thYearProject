@@ -1,6 +1,5 @@
 import time
 
-import CameraModule
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 from threading import Thread

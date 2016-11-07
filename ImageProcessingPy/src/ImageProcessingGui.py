@@ -1,12 +1,11 @@
 import cv2
-import numpy as np
 import PySide.QtCore as QtCore
 import PySide.QtGui as QtGui
 
 def startCapture(cap):
     print "pressed start"
     while(True):
-        ret, frame = cap.read()
+        _, frame = cap.read()
         cv2.imshow("Capture", frame)
         cv2.waitKey(5)
     cv2.destroyAllWindows() 
@@ -56,7 +55,7 @@ class Capture():
         self.capturing = True
         cap = self.c
         while(self.capturing):
-            ret, frame = cap.read()
+            _, frame = cap.read()
             cv2.imshow("Capture", frame)
             cv2.waitKey(5)
         cv2.destroyAllWindows()

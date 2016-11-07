@@ -16,7 +16,7 @@ def plotHsvHist(hist):
     
     # Plot histogram.
     #n, bins, patches = plt.hist(data, 25, normed=1, color='green')
-    n, bins, patches = plt.hist(histBins, weights=hist, bins=histBins)
+    _, bins, patches = plt.hist(histBins, weights=hist, bins=histBins)
     
     bin_centers = 0.5 * (bins[:-1] + bins[1:])
     
@@ -35,6 +35,7 @@ def plotHsvHist(hist):
     data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
     data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
 
+    plt.clf()
     data = cv2.cvtColor(data, cv2.COLOR_RGB2BGR)
 
     return data
