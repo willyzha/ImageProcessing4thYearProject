@@ -535,5 +535,5 @@ if __name__ == "__main__":
     
     camera = Webcam(resolution)    
     processor = ImageProcessor(camera, resolution, avgFilterN)
-    processor.setDebug(debug)
+    processor.setDebugMode(debug)
     processor.processImage()
