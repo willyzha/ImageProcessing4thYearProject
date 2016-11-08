@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import sys
 sys.path.append('../src')
-
 from WebcamModule import Webcam
 
 global Hmin, Smin, Vmin, Hmax, Smax, Vmax

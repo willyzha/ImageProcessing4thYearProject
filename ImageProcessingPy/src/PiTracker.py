@@ -1,11 +1,8 @@
 import argparse
-import ImageProcessing
-from ImageProcessing import enableDebug
+from ImageProcessing import ImageProcessor
 from PiCamModule import PiCam
-
-def processImage(resolution, avgFilterN):
-    camera = PiCam(resolution)
-    ImageProcessing.processImage(resolution, avgFilterN, camera)
+import PySide.QtGui as QtGui
+from TrackerWindow import Window
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Perform Camshift Tracking.\nUsage: \t"i" to select ROI\n\t"q" to exit' , formatter_class=argparse.RawTextHelpFormatter)
@@ -19,7 +16,13 @@ if __name__ == "__main__":
     avgFilterN = args.avgFilterN
     resolution = args.res
     
-    if debug:
-        enableDebug()        
     
-    processImage(resolution, avgFilterN)
+    
+    import sys
+    app = QtGui.QApplication(sys.argv)
+        
+    camera = PiCam(resolution)    
+    processor = ImageProcessor(camera, resolution, avgFilterN)
+    processor.setDebugMode(debug)
+    window = Window(processor)
+    sys.exit(app.exec_())
