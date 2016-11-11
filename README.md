@@ -1,5 +1,10 @@
 # ImageProcessing4thYearProject
 
+Required Libraries:
+- matplotlib
+- PySide
+- cv2 (OPENCV)
+
 http://docs.opencv.org/2.4/doc/user_guide/ug_traincascade.html
 
 **** BUILDING OPEN_CV FOR PYTHON ****
