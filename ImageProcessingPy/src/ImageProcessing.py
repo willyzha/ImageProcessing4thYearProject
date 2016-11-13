@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 import argparse
 import cv2
@@ -53,32 +54,44 @@ class AveragingFilter:
             return -1
         
 # Currently unused originally made for adaptive thresholding
-class RunningAvgStd:
+class MovingStatistic(object):
     """ Running average and standard deviation
     """ 
     # Keeps track of mean and standard deviation
     def __init__(self):
-        self.count = 0
+        # window size declares the number of samples to be used by the rolling statistics
+        # note that array will contain the windowSize+1 number of data for old data
+        self.windowSize = 40;
         self.mean = 0
-        self.std = 0
+        self.variance = 0
+        self.stddev = 0
+        self.data = []
+        self.dataReady = False
         
-    def update(self, data):
-        origMean = self.mean
-        
-        self.count = self.count + 1
-        self.mean = origMean + (data - origMean)/self.count
-        if self.count > 2:
-            self.std = sqrt((((self.count - 2) * self.std * self.std) + ((data - origMean)*(data-self.mean)))/(self.count - 1))
-
-    def getMeanStd(self):
-        return (self.mean, self.std)
-    
-    def inRange(self, data, nrStd):
-        # For best results this should be checked before calling update
-        if self.count > 100:
-            return data <= self.mean + nrStd * self.std
+    def update(self, newData):
+        if(self.dataReady):
+            oldMean = self.mean
+            newMean = oldMean + (newData-self.data[0])/(self.windowSize-1)
+            self.mean = newMean
+            self.variance += (newData-newMean+self.data[0]-oldMean)/(self.windowSize-1)
+            self.stddev = sqrt(self.variance)
+            self.data.pop(0)
+            self.data.append(newData)
         else:
-            return True
+            # fill the buffer until required number of data is collected
+            self.data.append(newData)
+            if (len(self.data)==self.windowSize):
+                self.mean = np.mean(self.data)
+                self.variance = np.var(self.data,ddof=1)
+                self.stddev = sqrt(self.variance)
+                self.dataReady = True
+
+    def getStatistics(self):
+        return (self.mean, self.stddev)
+    
+    def bufferReady(self):
+        # For best results this should be checked before calling update
+        return self.dataReady
 
 def printTime(text):
     if TIME_ANALYSIS:
@@ -270,6 +283,7 @@ class ImageProcessor:
         self.showHistogram = False
         self.modelHist = None
         self.showFps = False
+        self.movStat = MovingStatistic()
         
     def endImageProcessing(self):
         self.capturing = False
@@ -386,8 +400,11 @@ class ImageProcessor:
                     diff = compareHist(frame, roiBoundingBox, self.modelHist)
                     lastArea = roiBoundingBox[2] * roiBoundingBox[3]
                     printTime("  End compareHist: ")
+
+                    self.movStat.update(diff)
+                    movStatVal = self.movStat.getStatistics()
                     
-                    if diff > 0.4 and RETECTION_ENABLED:
+                    if (diff > movStatVal[0]+3*movStatVal[1] if movStat.bufferReady() else False) and RETECTION_ENABLED:
                         trackingLost = True
                     else:
                         printTime("  Start avgFilter: ")
@@ -484,6 +501,7 @@ class ImageProcessor:
                         
                     drawOverlay(frame, textToDraw=[frameRateText])
                     
+
                 startTime = time.time()
                 if self.outputMode is "BGR":
                     cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
@@ -495,6 +513,7 @@ class ImageProcessor:
                     cv2.imshow("frame", frame)
                 elif self.outputMode is "None":
                     print "Tracking Off. Press 'i' to initiate. fps=" + str(fps)            
+
             if DEBUG:
                 cv2.imwrite("frame.jpg", frame);
             
