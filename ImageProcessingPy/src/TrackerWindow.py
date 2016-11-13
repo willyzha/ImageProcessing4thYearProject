@@ -38,6 +38,10 @@ class Window(QtGui.QWidget):
         debugCheckbox = QtGui.QCheckBox("Debug")
         debugCheckbox.setChecked(imgProcessor.getDebug())
         debugCheckbox.clicked.connect(lambda:self.changeDebugMode(debugCheckbox))
+
+        fpsCheckbox = QtGui.QCheckBox("Fps")
+        fpsCheckbox.setChecked(False)
+        fpsCheckbox.clicked.connect(lambda:self.changeFpsMode(fpsCheckbox))
         
         histCheckbox = QtGui.QCheckBox("Hist")
         histCheckbox.setChecked(False)
@@ -50,6 +54,7 @@ class Window(QtGui.QWidget):
         hbox.addWidget(bNone,0,3)
         hbox.addWidget(histCheckbox,1,0)
         hbox.addWidget(debugCheckbox,1,1)
+        hbox.addWidget(fpsCheckbox, 1,2)
         self.box2.setLayout(hbox)
         self.box2.setEnabled(False)
 
@@ -90,5 +95,8 @@ class Window(QtGui.QWidget):
         
     def changeHistMode(self, cb):
         self.imageProcessor.setShowHistogram(cb.isChecked())
+
+    def changeFpsMode(self, cb):
+        self.imageProcessor.setShowFps(cb.isChecked())
         
         

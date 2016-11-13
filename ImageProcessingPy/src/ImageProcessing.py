@@ -21,6 +21,9 @@ UPPER_MASK_BOUND = np.array([255,255,255])
 # ENABLE/DISABLE TRACKING HALTING AND REDETECTION
 RETECTION_ENABLED = False
 
+text = namedtuple('text', ['text', 'origin', 'color'])
+point = namedtuple('point', ['x', 'y', 'color'])
+
 def buttonPress(event):
     print event
 
@@ -201,6 +204,9 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     
     return (center, boundingRect, newRoiBox, rotatedRectPts)
 
+def calculateFrameRate(deltaT):
+    return int(round(1/deltaT))
+
 def redetectionAlg(aFrame, aRoiHist, aLastArea, aDiffThresh):
     """ Algorithm for redetecting the object after it is lost
         Inputs:
@@ -261,6 +267,7 @@ class ImageProcessor:
         self.outputMode = "BGR"
         self.showHistogram = False
         self.modelHist = None
+        self.showFps = False
         
     def endImageProcessing(self):
         self.capturing = False
@@ -298,7 +305,9 @@ class ImageProcessor:
                 cv2.imshow('ModelHistogram', HistogramPlotter.plotHsvHist(self.modelHist))
         else:
             cv2.destroyWindow('ModelHistogram')
-        
+
+    def setShowFps(self, showFps):
+        self.showFps = showFps
 
     def getDebug(self):
         return DEBUG
@@ -341,9 +350,9 @@ class ImageProcessor:
         
         trackingLost = False
         lastArea = 0
-    
+
         #diffAvg = RunningAvgStd()
-        
+        startTime = time.time()        
         #For matlab analysis
         #open("../../MatlabScripts/diff.txt", "w").close()
         
@@ -391,8 +400,6 @@ class ImageProcessor:
                         error = (self.resolution[0]/2-xPos, self.resolution[1]/2-yPos)
                         printTime("  End avgFilter: ")
                         printTime("  Start drawing: ")
-                        text = namedtuple('text', ['text', 'origin', 'color'])
-                        point = namedtuple('point', ['x', 'y', 'color'])
                         
                         # HUE: RED=0 -- GREEN=60 -- BLUE=120
                         avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (120,0,0))
@@ -413,6 +420,12 @@ class ImageProcessor:
                         printTime(" Start showFrame: ")
                         drawOverlay(frame, 
                                     crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10))
+                        if self.showFps:
+                            fps = calculateFrameRate(time.time() - startTime)
+                            frameRateText = text(str(fps), (self.resolution[0]-25,15), (120,0,0))
+                            drawOverlay(frame, textToDraw=[frameRateText])
+
+                        startTime = time.time()
                         
                         if self.outputMode is "BGR":
                             cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
@@ -423,10 +436,10 @@ class ImageProcessor:
                         elif self.outputMode is "HSVraw":
                             cv2.imshow("frame", frame)
                         elif self.outputMode is "None" and not DEBUG:
-                            print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos)) + " diff=(" + '{0:.5f}'.format(diff)+")"
+                            print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos)) + " diff=(" + '{0:.5f}'.format(diff)+") fps=" + str(fps)
                             
                         if DEBUG:
-                            print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos)) + " diff=(" + '{0:.5f}'.format(diff)+")"
+                            print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos)) + " diff=(" + '{0:.5f}'.format(diff)+") fps=" + str(fps)
                                     
                         printTime(" End showFrame: ")
                 else: #Tracking is lost therefore begin running redetectionAlg
@@ -436,6 +449,14 @@ class ImageProcessor:
                     if redetectRoi is not None:
                         roiBox = redetectRoi
                         trackingLost = False
+                        
+                    if self.showFps:
+                        fps = calculateFrameRate(time.time() - startTime)
+                        frameRateText = text(str(fps), (self.resolution[0]-25,15), (120,0,0))
+                        
+                        drawOverlay(frame, textToDraw=[frameRateText])
+                    
+                    startTime = time.time()
 
                     if self.outputMode is "BGR":
                         cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
@@ -446,7 +467,7 @@ class ImageProcessor:
                     elif self.outputMode is "HSVraw":
                         cv2.imshow("frame", frame)
                     elif self.outputMode is "None":
-                        print "TRACKING LOST " + str(trackingLost)
+                        print "TRACKING LOST " + str(trackingLost) + " fps=" + str(fps)
     
                 printTime(" End tracking: ")
                 # For matlab analysis
@@ -455,6 +476,13 @@ class ImageProcessor:
                 
             # show the frame and record if the user presses a key
             else:
+                if self.showFps:
+                    fps = calculateFrameRate(time.time() - startTime)
+                    frameRateText = text(str(fps), (self.resolution[0]-25,15), (120,0,0))
+                        
+                    drawOverlay(frame, textToDraw=[frameRateText])
+                    
+                startTime = time.time()
                 if self.outputMode is "BGR":
                     cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
                 elif self.outputMode is "HSVpure":
@@ -464,9 +492,7 @@ class ImageProcessor:
                 elif self.outputMode is "HSVraw":
                     cv2.imshow("frame", frame)
                 elif self.outputMode is "None":
-                    print "Tracking Off. Press 'i' to initiate."
-
-            
+                    print "Tracking Off. Press 'i' to initiate. fps=" + str(fps)            
             if DEBUG:
                 cv2.imwrite("frame.jpg", frame);
             
