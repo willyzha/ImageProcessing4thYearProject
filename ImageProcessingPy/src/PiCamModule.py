@@ -20,7 +20,7 @@ class PiCam:
     
     def start(self):
         Thread(target=self.update, args=()).start()
-        time.sleep(1)
+        time.sleep(0.5)
 
     def update(self):
         for f in self.stream:

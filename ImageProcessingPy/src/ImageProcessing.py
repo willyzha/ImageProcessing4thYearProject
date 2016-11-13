@@ -205,6 +205,8 @@ def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     return (center, boundingRect, newRoiBox, rotatedRectPts)
 
 def calculateFrameRate(deltaT):
+    if deltaT == 0:
+        return -1
     return int(round(1/deltaT))
 
 def redetectionAlg(aFrame, aRoiHist, aLastArea, aDiffThresh):
