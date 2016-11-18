@@ -137,8 +137,8 @@ def compareHist(frame, roiWindow, refHist):
 def drawCrossHair(frame, x, y, size):
     """ Draw a cross hair
     """
-    cv2.line(frame, (x+size, y),(x-size,y),color=(0,255,255),thickness=1)
-    cv2.line(frame, (x, y+size),(x,y-size),color=(0,255,255),thickness=1)
+    cv2.line(frame, (int(x+size), int(y)),(int(x-size),int(y)),color=(0,255,255),thickness=1)
+    cv2.line(frame, (int(x), int(y+size)),(int(x),int(y-size)),color=(0,255,255),thickness=1)
 
 def drawOverlay(targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsToDraw=[]):
     """ Draws crossHair, boxes, text and points on the targetFrame
@@ -151,6 +151,7 @@ def drawOverlay(targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsTo
         cv2.polylines(targetFrame, [boxPts], True, (60, 255, 255), 2)   
     
     for text in textToDraw:
+        print text.origin
         cv2.putText(targetFrame, text=text.text, org=text.origin, 
             fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
             color=text.color,thickness=1, lineType=cv2.LINE_AA)
@@ -404,7 +405,7 @@ class ImageProcessor:
                     self.movStat.update(diff)
                     movStatVal = self.movStat.getStatistics()
                     
-                    if (diff > movStatVal[0]+3*movStatVal[1] if movStat.bufferReady() else False) and RETECTION_ENABLED:
+                    if (diff > movStatVal[0]+3*movStatVal[1] if self.movStat.bufferReady() else False) and RETECTION_ENABLED:
                         trackingLost = True
                     else:
                         printTime("  Start avgFilter: ")
@@ -421,13 +422,13 @@ class ImageProcessor:
                         printTime("  Start drawing: ")
                         
                         # HUE: RED=0 -- GREEN=60 -- BLUE=120
-                        avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (120,0,0))
-                        errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,self.resolution[1]-10), (0,255,0))
-                        diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,self.resolution[1]-10), (0,255,0))
+                        avgPointText = text("("+str(xPos)+","+str(yPos)+")", (int(xPos)+10,int(yPos)), (120,0,0))
+                        errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,int(self.resolution[1]-10)), (0,255,0))
+                        diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,int(self.resolution[1]-10)), (0,255,0))
                         #stdText = text("mean,std=("+'{0:.5f}'.format(diffAvg.getMeanStd()[0]) + "," +'{0:.5f}'.format(diffAvg.getMeanStd()[1]) + ")", 
                         #                (275,resolution[1]-10), (255,0,0))
                         
-                        avgCenterPoint = point(xPos, yPos, (120,0,0))
+                        avgCenterPoint = point(int(xPos), int(yPos), (120,0,0))
                         trueCenterPoint = point(center[0], center[1], (0,255,255))
                         
                         drawOverlay(frame,
