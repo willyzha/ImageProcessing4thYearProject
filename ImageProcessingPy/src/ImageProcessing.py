@@ -310,7 +310,6 @@ class ImageProcessor:
             cv2.imshow("frame", cv2.cvtColor(param,cv2.COLOR_HSV2BGR))
 
     def displayOutput(self, aFrame):
-
         if self.outputMode is "BGR":
             cv2.imshow("frame", cv2.cvtColor(aFrame, cv2.COLOR_HSV2BGR))
         elif self.outputMode is "HSVpure":
@@ -319,8 +318,6 @@ class ImageProcessor:
             cv2.imshow("frame", cv2.cvtColor(aFrame, cv2.COLOR_HSV2BGR))
         elif self.outputMode is "HSVraw":
             cv2.imshow("frame", aFrame)
-#         elif self.outputMode is "None" or DEBUG:
-#             print data
 
     def drawOverlay(self, targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsToDraw=[], numToDraw=None):
         """ Draws crossHair, boxes, text and points on the targetFrame
@@ -563,13 +560,24 @@ if __name__ == "__main__":
     parser.add_argument('-d','--debug', dest='debug', action='store_const', const=True, default=False, help='enable debug mode. Displays multiple screens and saves .jpg images.')
     parser.add_argument('-filter', dest='avgFilterN', default=10, type=int, help='set length of averaging filter.')
     parser.add_argument('-resolution', dest='res', default=[640, 480], nargs=2, type=int, help='set resolution of camera video capture. usage: -resolution [X] [Y].')
+    parser.add_argument('-showFps', dest='showFps', action='store_const', const=True, default=False, help='display fps.')
+    parser.add_argument('-displayMode', dest='mode', default='BGR', type=str, help='choose display mode.')
+    parser.add_argument('-showHist', dest='showHist', action='store_const', const=True, default=False, help='display fps.')
     args = parser.parse_args()
 
     debug = args.debug
+    showFps = args.showFps
     avgFilterN = args.avgFilterN
     resolution = args.res
+    displayMode = args.mode
+    showHist = args.showHist
     
-    camera = Webcam(resolution)    
+    camera = Webcam(resolution)
     processor = ImageProcessor(camera, resolution, avgFilterN)
+    time.sleep(1)
     processor.setDebugMode(debug)
+    processor.setShowFps(showFps)
+    processor.setOutputMode(displayMode)
+    processor.setShowHistogram(showHist)
     processor.processImage()
+    camera.release()
