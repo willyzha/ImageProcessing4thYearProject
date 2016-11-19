@@ -6,7 +6,7 @@ from collections import namedtuple
 from WebcamModule import Webcam
 import time
 from math import sqrt
-import HistogramPlotter
+from HistogramPlotter import plotHsvHist
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -22,7 +22,8 @@ UPPER_MASK_BOUND = np.array([255,255,255])
 RETECTION_ENABLED = False
 
 text = namedtuple('text', ['text', 'origin', 'color'])
-point = namedtuple('point', ['x', 'y', 'color'])
+point = namedtuple('point', ['name', 'x', 'y', 'color', 'text'])
+number = namedtuple('number', ['name', 'val', 'origin', 'color'])
 
 def buttonPress(event):
     print event
@@ -126,24 +127,6 @@ def drawCrossHair(frame, x, y, size):
     """
     cv2.line(frame, (x+size, y),(x-size,y),color=(0,255,255),thickness=1)
     cv2.line(frame, (x, y+size),(x,y-size),color=(0,255,255),thickness=1)
-
-def drawOverlay(targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsToDraw=[]):
-    """ Draws crossHair, boxes, text and points on the targetFrame
-        WARNING: DO NOT DRAW ON PROCESSING FRAME!!!
-    """
-    if crossHair is not None:
-        drawCrossHair(targetFrame, crossHair[0], crossHair[1], crossHair[2])
-    
-    if boxPts is not None:
-        cv2.polylines(targetFrame, [boxPts], True, (60, 255, 255), 2)   
-    
-    for text in textToDraw:
-        cv2.putText(targetFrame, text=text.text, org=text.origin, 
-            fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
-            color=text.color,thickness=1, lineType=cv2.LINE_AA)
-
-    for point in pointsToDraw:
-        cv2.circle(targetFrame,(point.x,point.y),2,point.color,thickness=3)
 
 def camShiftTracker(aFrame, aRoiBox, aRoiHist):
     """ Main CamShift tracking function
@@ -304,7 +287,7 @@ class ImageProcessor:
         self.showHistogram = h
         if h:
             if self.modelHist is not None:
-                cv2.imshow('ModelHistogram', HistogramPlotter.plotHsvHist(self.modelHist))
+                cv2.imshow('ModelHistogram', plotHsvHist(self.modelHist))
         else:
             cv2.destroyWindow('ModelHistogram')
 
@@ -326,6 +309,59 @@ class ImageProcessor:
             cv2.circle(param, (x, y), 4, (60,255,255), 2)
             cv2.imshow("frame", cv2.cvtColor(param,cv2.COLOR_HSV2BGR))
 
+    def displayOutput(self, aFrame):
+
+        if self.outputMode is "BGR":
+            cv2.imshow("frame", cv2.cvtColor(aFrame, cv2.COLOR_HSV2BGR))
+        elif self.outputMode is "HSVpure":
+            aFrame[:,:,2] = 255
+            aFrame[:,:,1] = 255
+            cv2.imshow("frame", cv2.cvtColor(aFrame, cv2.COLOR_HSV2BGR))
+        elif self.outputMode is "HSVraw":
+            cv2.imshow("frame", aFrame)
+#         elif self.outputMode is "None" or DEBUG:
+#             print data
+
+    def drawOverlay(self, targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsToDraw=[], numToDraw=None):
+        """ Draws crossHair, boxes, text and points on the targetFrame
+            WARNING: DO NOT DRAW ON PROCESSING FRAME!!!
+        """
+        if self.outputMode is "None" or DEBUG:
+            outputText = ""
+            for point in pointsToDraw:
+                outputText = outputText + point.name+ "="  + point.text + " "
+            
+            for text in textToDraw:
+                outputText = outputText + text.text + " "
+                
+            if numToDraw is not None:
+                outputText = outputText + numToDraw.name + "=(" + str(numToDraw.val) + ")"
+            
+            print outputText
+
+        if self.outputMode is not "None" or DEBUG:
+            if crossHair is not None:
+                drawCrossHair(targetFrame, crossHair[0], crossHair[1], crossHair[2])
+            
+            if boxPts is not None:
+                cv2.polylines(targetFrame, [boxPts], True, (60, 255, 255), 2)   
+            
+            for text in textToDraw:
+                cv2.putText(targetFrame, text=text.text, org=text.origin, 
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+                    color=text.color,thickness=1, lineType=cv2.LINE_AA)
+                
+            if numToDraw is not None:
+                cv2.putText(targetFrame, text=str(numToDraw.val), org=numToDraw.origin,
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+                    color=numToDraw.color,thickness=1, lineType=cv2.LINE_AA)
+        
+            for point in pointsToDraw:
+                cv2.putText(targetFrame, text=point.text, org=(point.x,point.y),
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,fontScale=0.5, 
+                    color=point.color,thickness=1, lineType=cv2.LINE_AA)
+                cv2.circle(targetFrame,(point.x,point.y),2,point.color,thickness=3)
+
     def processImage(self):
         """ Main Loop Function for Tracking
         """
@@ -334,13 +370,6 @@ class ImageProcessor:
         self.capturing = True
         
         printTime("Start processImage: ")
-    
-        # if camera is not passed in then use default webcam
-#         camera = None
-#         if cameraIn:
-#             camera = cameraIn[0]
-#         else:
-#             camera = WebcamModule.Webcam(resolution)    
     
         # setup the mouse callback
         cv2.namedWindow("frame")
@@ -404,44 +433,36 @@ class ImageProcessor:
                         printTime("  Start drawing: ")
                         
                         # HUE: RED=0 -- GREEN=60 -- BLUE=120
-                        avgPointText = text("("+str(xPos)+","+str(yPos)+")", (xPos+10,yPos), (120,0,0))
                         errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,self.resolution[1]-10), (0,255,0))
                         diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,self.resolution[1]-10), (0,255,0))
                         #stdText = text("mean,std=("+'{0:.5f}'.format(diffAvg.getMeanStd()[0]) + "," +'{0:.5f}'.format(diffAvg.getMeanStd()[1]) + ")", 
                         #                (275,resolution[1]-10), (255,0,0))
                         
-                        avgCenterPoint = point(xPos, yPos, (120,0,0))
-                        trueCenterPoint = point(center[0], center[1], (0,255,255))
+                        avgCenterPoint = point('AvgCoords', xPos, yPos, (120,0,0), '('+str(xPos)+','+str(yPos)+')')
+                        trueCenterPoint = point('Coordinates', center[0], center[1], (0,255,255), '')
                         
-                        drawOverlay(frame,
+                        overlayTexts = [errorText, diffText]
+                        frameRateNum = None
+                        if self.showFps:
+                            fps = calculateFrameRate(time.time() - startTime)
+                            frameRateNum = number('fps', fps, (self.resolution[0]-25,15), (120,0,0))
+                        
+                        self.drawOverlay(frame,
                                     boxPts=pts,
-                                    textToDraw=[avgPointText, errorText, diffText],
-                                    pointsToDraw=[trueCenterPoint, avgCenterPoint])
+                                    textToDraw=overlayTexts,
+                                    pointsToDraw=[trueCenterPoint, avgCenterPoint],
+                                    crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10),
+                                    numToDraw=frameRateNum)
+                        
                         printTime("  End drawing: ")
                         
                         printTime(" Start showFrame: ")
-                        drawOverlay(frame, 
-                                    crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10))
-                        if self.showFps:
-                            fps = calculateFrameRate(time.time() - startTime)
-                            frameRateText = text(str(fps), (self.resolution[0]-25,15), (120,0,0))
-                            drawOverlay(frame, textToDraw=[frameRateText])
+
 
                         startTime = time.time()
                         
-                        if self.outputMode is "BGR":
-                            cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
-                        elif self.outputMode is "HSVpure":
-                            frame[:,:,2] = 255
-                            frame[:,:,1] = 255
-                            cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
-                        elif self.outputMode is "HSVraw":
-                            cv2.imshow("frame", frame)
-                        elif self.outputMode is "None" and not DEBUG:
-                            print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos)) + " diff=(" + '{0:.5f}'.format(diff)+") fps=" + str(fps)
-                            
-                        if DEBUG:
-                            print "Coordinates=" + str((center[0],center[1])) + " AvgCoords=" + str((xPos, yPos)) + " diff=(" + '{0:.5f}'.format(diff)+") fps=" + str(fps)
+                        self.displayOutput(frame)
+
                                     
                         printTime(" End showFrame: ")
                 else: #Tracking is lost therefore begin running redetectionAlg
@@ -454,22 +475,15 @@ class ImageProcessor:
                         
                     if self.showFps:
                         fps = calculateFrameRate(time.time() - startTime)
-                        frameRateText = text(str(fps), (self.resolution[0]-25,15), (120,0,0))
+                        frameRateNum = number('fps', fps, (self.resolution[0]-25,15), (120,0,0))
                         
-                        drawOverlay(frame, textToDraw=[frameRateText])
+                        self.drawOverlay(frame, numToDraw=frameRateNum)
                     
                     startTime = time.time()
 
-                    if self.outputMode is "BGR":
-                        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
-                    elif self.outputMode is "HSVpure":
-                        frame[:,:,2] = 255
-                        frame[:,:,1] = 255
-                        cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
-                    elif self.outputMode is "HSVraw":
-                        cv2.imshow("frame", frame)
-                    elif self.outputMode is "None":
-                        print "TRACKING LOST " + str(trackingLost) + " fps=" + str(fps)
+                    self.displayOutput(frame)
+                    
+#                     print "TRACKING LOST " + str(trackingLost) + " fps=" + str(fps)
     
                 printTime(" End tracking: ")
                 # For matlab analysis
@@ -480,21 +494,15 @@ class ImageProcessor:
             else:
                 if self.showFps:
                     fps = calculateFrameRate(time.time() - startTime)
-                    frameRateText = text(str(fps), (self.resolution[0]-25,15), (120,0,0))
+                    frameRateNum = number('fps', fps, (self.resolution[0]-25,15), (120,0,0))
                         
-                    drawOverlay(frame, textToDraw=[frameRateText])
+                    self.drawOverlay(frame, numToDraw=frameRateNum)
                     
                 startTime = time.time()
-                if self.outputMode is "BGR":
-                    cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
-                elif self.outputMode is "HSVpure":
-                    frame[:,:,2] = 255
-                    frame[:,:,1] = 255
-                    cv2.imshow("frame", cv2.cvtColor(frame, cv2.COLOR_HSV2BGR))
-                elif self.outputMode is "HSVraw":
-                    cv2.imshow("frame", frame)
-                elif self.outputMode is "None":
-                    print "Tracking Off. Press 'i' to initiate. fps=" + str(fps)            
+
+                self.displayOutput(frame)
+
+#                print "Tracking Off. Press 'i' to initiate. fps=" + str(fps)            
             if DEBUG:
                 cv2.imwrite("frame.jpg", frame);
             
@@ -536,7 +544,7 @@ class ImageProcessor:
                 
                 if DEBUG or self.showHistogram:
                     print self.modelHist
-                    cv2.imshow('ModelHistogram', HistogramPlotter.plotHsvHist(self.modelHist))
+                    cv2.imshow('ModelHistogram', plotHsvHist(self.modelHist))
                 
                 roiBox = (tl[0], tl[1], br[0], br[1])
                 cv2.setMouseCallback("frame", self.selectROI, None)
