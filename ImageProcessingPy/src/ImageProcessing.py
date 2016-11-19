@@ -574,7 +574,6 @@ if __name__ == "__main__":
     
     camera = Webcam(resolution)
     processor = ImageProcessor(camera, resolution, avgFilterN)
-    time.sleep(1)
     processor.setDebugMode(debug)
     processor.setShowFps(showFps)
     processor.setOutputMode(displayMode)

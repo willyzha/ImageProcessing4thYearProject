@@ -16,7 +16,7 @@ class Webcam(CameraModule):
         
     def start(self):
         Thread(target=self.update, args=()).start()
-        time.sleep(0.1)
+        time.sleep(2)
         
     def update(self):
         # keep looping infinitely until the thread is stopped
