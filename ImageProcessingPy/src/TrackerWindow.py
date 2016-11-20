@@ -48,6 +48,10 @@ class Window(QtGui.QWidget):
         histCheckbox.setChecked(False)
         histCheckbox.clicked.connect(lambda:self.changeHistMode(histCheckbox))
         
+        servoCheckbox = QtGui.QCheckBox("Servo")
+        servoCheckbox.setChecked(False)
+        servoCheckbox.clicked.connect(lambda:self.changeServoMode(servoCheckbox))
+        
         hbox = QtGui.QGridLayout(self.box2)
         hbox.addWidget(bBGR,0,0)
         hbox.addWidget(bHSVpure,0,1)
@@ -56,6 +60,7 @@ class Window(QtGui.QWidget):
         hbox.addWidget(histCheckbox,1,0)
         hbox.addWidget(debugCheckbox,1,1)
         hbox.addWidget(fpsCheckbox, 1,2)
+        hbox.addWidget(servoCheckbox,1,3)
         self.box2.setLayout(hbox)
         self.box2.setEnabled(False)
 
@@ -104,4 +109,5 @@ class Window(QtGui.QWidget):
     def changeFpsMode(self, cb):
         self.imageProcessor.setShowFps(cb.isChecked())
         
-        
+    def changeServoMode(self, cb):
+        self.imageProcessor.setServo(cb.isChecked())
