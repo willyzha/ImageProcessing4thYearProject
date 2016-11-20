@@ -11,8 +11,8 @@ void setup(){
  Serial.setTimeout(1000);
  pinMode(ledRed, OUTPUT);     
 
-  panServo.attach(9, 500, 2350);  // attaches the servo on pin 9 to the servo object
-  tiltServo.attach(8, 500, 2350);
+  panServo.attach(9, 500, 2400);  // attaches the servo on pin 9 to the servo object
+  tiltServo.attach(8, 500, 2400);
 }
 
 void loop(){

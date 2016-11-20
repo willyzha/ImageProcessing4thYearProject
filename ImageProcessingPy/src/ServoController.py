@@ -16,6 +16,9 @@ class ServoController():
         self.tilt = TILT_CENTER
         time.sleep(1)      
 
+    #def setup(self):
+        #self.serialPort = serial.Serial(self.port, self.baudRate, timeout=self.timeout)
+
     def close(self):
         self.serialPort.close()
         self.serialPort = None
@@ -44,16 +47,16 @@ if __name__ == "__main__":
     servoCtrl = ServoController('COM3', 9600, 2)
     #servoCtrl.setup()
     angle = 90
-    increment = 10;
+    increment = 1;
     while True:
-        time.sleep(0.8)
+        time.sleep(0.01)
         angle = angle + increment
         servoCtrl.updatePan(increment)
         servoCtrl.updateTilt(increment)
         servoCtrl.updateServoPosition()
         if angle <= 0:
-            increment = 10
+            increment = 1
         elif angle >= 180:
-            increment = -10
+            increment = -1
             
             
