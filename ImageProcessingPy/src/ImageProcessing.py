@@ -105,10 +105,6 @@ def compareHist(frame, roiWindow, refHist):
     # Use the same mask from the original histogram generation
     mask  = getHSVMask(roi, LOWER_MASK_BOUND, UPPER_MASK_BOUND)
     
-    if DEBUG: # Write some the mask and ROI as .jpg files for debugging
-        cv2.imwrite("mask.jpg", mask)
-        cv2.imwrite("roi.jpg", roi)
-    
     # Calculate the histogram for the region of interest
     newHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
     
@@ -470,8 +466,6 @@ class ImageProcessor:
                 self.displayOutput(frame)
 
 #                print "Tracking Off. Press 'i' to initiate. fps=" + str(fps)            
-            if DEBUG:
-                cv2.imwrite("frame.jpg", frame);
             
             key = cv2.waitKey(1) & 0xFF
     
