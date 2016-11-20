@@ -81,10 +81,6 @@ class RunningAvgStd:
         else:
             return True
 
-def printTime(text):
-    if TIME_ANALYSIS:
-            print (text + str(time.time()))
-
 def getHSVMask(frame, lowerb, upperb):
     """ Finds the HSV mask for the input frame given a lower bound and upper bound
     """
@@ -365,8 +361,6 @@ class ImageProcessor:
         global inputMode
         
         self.capturing = True
-        
-        printTime("Start processImage: ")
     
         # setup the mouse callback
         cv2.namedWindow("frame")
@@ -386,14 +380,9 @@ class ImageProcessor:
         
         # keep looping over the frames
         while self.capturing:
-            
-            printTime(" Start getFrame(): ")
-            
             # grab the current frame
             (grabbed, frame) = self.camera.getFrame()
-            printTime(" End getFrame(): ")
-            # check to see if we have reached the end of the
-            # video
+
             if not grabbed:
                 print "Could not read from camera exiting..."
                 break
@@ -402,22 +391,15 @@ class ImageProcessor:
             
             # if the see if the ROI has been computed
             if roiBox is not None and self.modelHist is not None:
-                printTime(" Start tracking: ")
                 if not trackingLost:
-                    printTime("  Start camShift: ")
                     (center, roiBoundingBox, roiBox, pts) = camShiftTracker(frame, roiBox, self.modelHist)
-                    printTime("  End camShift: ")
                     
-                    printTime("  Start compareHist: ")
                     diff = compareHist(frame, roiBoundingBox, self.modelHist)
                     lastArea = roiBoundingBox[2] * roiBoundingBox[3]
-                    printTime("  End compareHist: ")
                     
                     if diff > 0.4 and RETECTION_ENABLED:
                         trackingLost = True
-                    else:
-                        printTime("  Start avgFilter: ")
-                        
+                    else:                      
                         #diffAvg.update(diff)
                         avgFilterX.add(center[0])
                         avgFilterY.add(center[1])
@@ -426,8 +408,6 @@ class ImageProcessor:
                         yPos = avgFilterY.getAverage()
                             
                         error = (self.resolution[0]/2-xPos, self.resolution[1]/2-yPos)
-                        printTime("  End avgFilter: ")
-                        printTime("  Start drawing: ")
                         
                         # HUE: RED=0 -- GREEN=60 -- BLUE=120
                         errorText = text("err=("+str(error[0])+","+str(error[1])+")", (10,self.resolution[1]-10), (0,255,0))
@@ -450,22 +430,13 @@ class ImageProcessor:
                                     pointsToDraw=[trueCenterPoint, avgCenterPoint],
                                     crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10),
                                     numToDraw=frameRateNum)
-                        
-                        printTime("  End drawing: ")
-                        
-                        printTime(" Start showFrame: ")
-
 
                         startTime = time.time()
                         
                         self.displayOutput(frame)
-
-                                    
-                        printTime(" End showFrame: ")
+                                   
                 else: #Tracking is lost therefore begin running redetectionAlg
-                    printTime("  Start redetection: ")
                     redetectRoi = redetectionAlg(frame, self.modelHist, lastArea, 0.4)
-                    printTime("  End redetection: ")
                     if redetectRoi is not None:
                         roiBox = redetectRoi
                         trackingLost = False
@@ -482,7 +453,6 @@ class ImageProcessor:
                     
 #                     print "TRACKING LOST " + str(trackingLost) + " fps=" + str(fps)
     
-                printTime(" End tracking: ")
                 # For matlab analysis
                 # fo = open("../../MatlabScripts/diff.txt", 'a')
                 # fo.write(str(diff)+'\n')

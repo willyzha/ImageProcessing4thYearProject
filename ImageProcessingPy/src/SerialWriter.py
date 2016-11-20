@@ -9,13 +9,19 @@ class SerialPort():
     def write(self, text):
         #self.serialPort.open()
         
-        self.serialPort.write(b'hello serial')
+        self.serialPort.write(text)
         #self.serialPort.close()
     
 if __name__ == "__main__":
     port = SerialPort('COM3', 9600, 2)
-    
+    angle = 0
+    increment = 1;
     while True:
-        print "sending"
-        port.write("hello\n")
-        time.sleep(0.5)    
+        print "sending " + str(angle)
+        port.write(str(angle)+"\n")
+        time.sleep(0.01)
+        angle = angle + increment
+        if angle <= 0:
+            increment = 1
+        elif angle >= 180:
+            increment = -1
