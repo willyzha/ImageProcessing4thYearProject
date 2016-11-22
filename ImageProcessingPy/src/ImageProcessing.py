@@ -8,6 +8,7 @@ import time
 from math import sqrt
 from HistogramPlotter import plotHsvHist
 from ServoController import ServoController
+from BaseTrackingAlgorithm import TrackingAlgorithm
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -235,7 +236,7 @@ def redetectionAlg(aFrame, aRoiHist, aLastArea, aDiffThresh):
 
     return matchedRect
 
-class ImageProcessor:
+class ImageProcessor(TrackingAlgorithm):
     def __init__(self, cameraModule, res, avgFilterN):
         self.capturing = False
         self.camera = cameraModule
@@ -383,7 +384,7 @@ class ImageProcessor:
                     color=point.color,thickness=1, lineType=cv2.LINE_AA)
                 cv2.circle(targetFrame,(point.x,point.y),2,point.color,thickness=3)
 
-    def processImage(self):
+    def startTracking(self):
         """ Main Loop Function for Tracking
         """
         global inputMode
@@ -577,5 +578,5 @@ if __name__ == "__main__":
     processor.setShowFps(showFps)
     processor.setOutputMode(displayMode)
     processor.setShowHistogram(showHist)
-    processor.processImage()
+    processor.startTracking()
     camera.release()

@@ -4,10 +4,12 @@ from CameraModule import CameraModule
 from threading import Thread
 
 class Webcam(CameraModule):
-    def __init__(self, resolution):
+    def __init__(self, resolution, colorOutput="HSV"):
         self.camera = cv2.VideoCapture(0)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
+        
+        self.outputColor = colorOutput
         
         self.stopped = False
         self.grabbed = False
@@ -27,7 +29,10 @@ class Webcam(CameraModule):
  
             # otherwise, read the next frame from the stream
             (self.grabbed, frame) = self.camera.read()
-            self.frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            if self.outputColor is "HSV":
+                self.frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            else: # BGR
+                self.frame = frame
  
     def stop(self):
         # indicate that the thread should be stopped

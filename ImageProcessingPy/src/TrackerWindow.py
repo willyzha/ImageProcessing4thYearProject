@@ -81,7 +81,7 @@ class Window(QtGui.QWidget):
         self.end_button.setEnabled(True)
         self.end_button.setVisible(True)
         self.box2.setEnabled(True)
-        self.imageProcessor.processImage()
+        self.imageProcessor.startTracking()
         
     def outputConfig(self, b):
         self.imageProcessor.setOutputMode(b.text())
