@@ -35,6 +35,7 @@ import cv2
 # built-in modules
 from collections import namedtuple
 from WebcamModule import Webcam
+from BaseTrackingAlgorithm import TrackingAlgorithm
 
 # local modules
 import cv2
@@ -134,6 +135,7 @@ class PlaneTracker:
         if descrs is None:  # detectAndCompute returns descs=None if not keypoints found
             descrs = []
         return keypoints, descrs
+    
 class RectSelector:
     def __init__(self, win, callback):
         self.win = win
@@ -169,7 +171,7 @@ class RectSelector:
     def dragging(self):
         return self.drag_rect is not None
 
-class App:
+class PlaneTracking(TrackingAlgorithm):
     def __init__(self, cameraModule):
         self.camera = cameraModule
         self.frame = None
@@ -214,5 +216,5 @@ if __name__ == '__main__':
 
     resolution = [640, 480]
     camera = Webcam(resolution, "BGR")
-    App(camera).startTracking()
+    PlaneTracking(camera).startTracking()
     camera.release()
