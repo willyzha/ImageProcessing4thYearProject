@@ -37,7 +37,7 @@ class PiCam:
         self.camera.awb_mode = 'off'
         rg,bg = (0.5, 0.5)
         self.camera.awb_gains = (rg, bg)
-        with PiRGBArray(self.camera, size=9128, 72)) as output:
+        with PiRGBArray(self.camera, size=(128, 72)) as output:
         # Allow 30 attempts to fix AWB
             for i in range(30):
                 # Capture a tiny resized image in RGB format, and extract the
@@ -62,7 +62,7 @@ class PiCam:
                 output.seek(0)
                 output.truncate()
         print 'calibration is completed'
-        if (abs(r - g) > 2) and (abs(b - g) > 1)
+        if (abs(r - g) > 2) and (abs(b - g) > 1):
             # whitebalance is failed, manual white balance is aborted and auto awb is set
             print 'calibration was not successful'
             self.camera.awb_mode='auto'
