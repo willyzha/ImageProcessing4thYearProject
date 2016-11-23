@@ -8,7 +8,7 @@ MIN_ANGLE = 0
 
 class SerialServo():
     def __init__(self, port, baudRate, timeout):
-        self.connection = serial.Serial(port=port,baudRate=baudRate,timeout=timeout)
+        self.connection = serial.Serial(port=port, baudrate=baudRate, timeout=timeout)
 
     def turnServo(self, direction):
         choices = {'up': 1, 'right': 2, 'down':3, 'left':4}

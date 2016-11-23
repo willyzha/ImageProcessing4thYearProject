@@ -295,6 +295,7 @@ class ImageProcessor:
                 print "Failed to setup serial port!"
                 self.servoCtrl = None
         elif enableServos is False and self.servoEnabled is True:
+            self.servoCtrl.closeSerial()
             self.servoCtrl = None
             self.servoEnabled = enableServos
 
@@ -561,7 +562,8 @@ class ImageProcessor:
             elif key == ord("q"):
                 #print "Quitting"
                 break
-    
+
+        self.servoCtrl.closeSerial()
         # cleanup the camera and close any open windows
         #self.camera.release()
         cv2.destroyWindow("frame")
