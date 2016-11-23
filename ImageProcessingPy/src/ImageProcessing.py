@@ -246,7 +246,8 @@ class ImageProcessor:
         self.showHistogram = False
         self.modelHist = None
         self.showFps = False
-        self.servoEnabled = True
+        self.servoEnabled = False
+
         
     def endImageProcessing(self):
         self.capturing = False
@@ -285,6 +286,18 @@ class ImageProcessor:
         else:
             cv2.destroyWindow('ModelHistogram')
 
+    def setServo(self, enableServos):
+        if enableServos is True and self.servoEnabled is False:
+            try:
+                self.servoCtrl = SerialServo('/dev/ttyACM2', 9600, 2)
+                self.servoEnabled = enableServos
+            except ValueError:
+                print "Failed to setup serial port!"
+                self.servoCtrl = None
+        elif enableServos is False and self.servoEnabled is True:
+            self.servoCtrl = None
+            self.servoEnabled = enableServos
+
     def adjustServo(self, targetPoint):
         center = (self.resolution[0]/2, self.resolution[1]/2)
         
@@ -316,17 +329,7 @@ class ImageProcessor:
     def setShowFps(self, showFps):
         self.showFps = showFps
 
-    def setServo(self, enableServos):
-        if enableServos is True and self.servoEnabled is False:
-            try:
-                self.servoCtrl = SerialServo('/dev/ttyACM2', 9600, 2)
-                self.servoEnabled = enableServos
-            except ValueError:
-                print "Failed to setup serial port!"
-                self.servoCtrl = None
-        elif enableServos is False and self.servoEnabled is True:
-            self.servoCtrl = None
-            self.servoEnabled = enableServos
+
 
     def getDebug(self):
         return DEBUG
@@ -397,7 +400,7 @@ class ImageProcessor:
         """ Main Loop Function for Tracking
         """
         global inputMode
-        
+
         self.capturing = True
     
         # setup the mouse callback
