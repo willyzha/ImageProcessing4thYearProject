@@ -7,7 +7,7 @@ from WebcamModule import Webcam
 import time
 from math import sqrt
 from HistogramPlotter import plotHsvHist
-from ServoController import ServoController
+from ServoController import SerialServo
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -246,7 +246,7 @@ class ImageProcessor:
         self.showHistogram = False
         self.modelHist = None
         self.showFps = False
-        self.servoEnabled = False
+        self.servoEnabled = True
         
     def endImageProcessing(self):
         self.capturing = False
@@ -290,18 +290,28 @@ class ImageProcessor:
         
         dX = targetPoint[0] - center[0]
         dY = targetPoint[1] - center[1]
-
-        if dX > 10:
-            self.servoCtrl.updatePan(1)
-        elif dX < -10:
-            self.servoCtrl.updatePan(-1)
-            
-        if dY > 10:
-            self.servoCtrl.updateTilt(-1)
-        elif dY < -10:
-            self.servoCtrl.updateTilt(1)
-            
-        self.servoCtrl.updateServoPosition()
+        while True:
+            if dX > 10:
+                self.servoCtrl.turnServo('left')
+            elif dX < -10:
+                self.servoCtrl.turnServo('right')
+            elif dY > 10:
+                self.servoCtrl.turnServo('up')
+            elif dY < -10:
+                self.servoCtrl.turnServo('down')
+            else:
+                break
+                # if dX > 10:
+        #     self.servoCtrl.updatePan(1)
+        # elif dX < -10:
+        #     self.servoCtrl.updatePan(-1)
+        #
+        # if dY > 10:
+        #     self.servoCtrl.updateTilt(-1)
+        # elif dY < -10:
+        #     self.servoCtrl.updateTilt(1)
+        #
+        # self.servoCtrl.updateServoPosition()
 
     def setShowFps(self, showFps):
         self.showFps = showFps
@@ -309,7 +319,7 @@ class ImageProcessor:
     def setServo(self, enableServos):
         if enableServos is True and self.servoEnabled is False:
             try:
-                self.servoCtrl = ServoController('COM3', 9600, 2)
+                self.servoCtrl = SerialServo('/dev/ttyACM2', 9600, 2)
                 self.servoEnabled = enableServos
             except ValueError:
                 print "Failed to setup serial port!"

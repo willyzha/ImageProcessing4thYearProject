@@ -11,7 +11,13 @@
 
 Servo panservo;  // create pan (horizontal) servo object
 Servo tiltservo; // create tilt (vertical) servo object
-// twelve servo objects can be created on most boards
+
+const int pan_min = 15;
+const int pan_neutral = 90;
+const int pan_max = 165;
+const int tilt_min = 0;
+const int tilt_neutral = 90;
+const int tilt_maxt = 180;
 
 int pos = 0;    // variable to store the servo position
 
@@ -22,6 +28,11 @@ void setup() {
 }
 
 void loop() {
+  panservo.write(0);
+  tiltservo.write(0);
+  delay(5000);
+  panservo.write(10);
+  delay(5000);
   for (pos = 0; pos <= 180; pos += 20) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     panservo.write(pos);              // tell servo to go to position in variable 'pos'

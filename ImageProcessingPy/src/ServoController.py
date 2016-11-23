@@ -6,6 +6,19 @@ TILT_CENTER = 90
 MAX_ANGLE = 180
 MIN_ANGLE = 0
 
+class SerialServo():
+    def __init__(self, port, baudRate, timeout):
+        self.connection = serial.Serial(port=port,baudRate=baudRate,timeout=timeout)
+
+    def turnServo(self, direction):
+        choices = {'up': 1, 'right': 2, 'down':3, 'left':4}
+        result = choices.get(direction, 'default')
+        self.connection.write(result)
+
+    def closeSerial(self):
+        self.connection.close()
+        self.connection = None
+
 class ServoController():
     def __init__(self, port, baudRate, timeout):
         self.port = port
