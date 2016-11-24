@@ -35,9 +35,11 @@ class FrameDrawer:
         self.name = frameName    
         self.latestFrame = None
         self.running = True
-        self.start()
         
     def start(self):
+        print 'START DRAWER'
+        self.running = True
+        cv2.namedWindow(self.name)
         Thread(target=self.frameUpdater, args=()).start()
     
     def updateFrame(self, frame, outputMode):
@@ -62,7 +64,9 @@ class FrameDrawer:
             cv2.imshow(self.name, aFrame)
     
     def destroy(self):
+        print 'DESTROY DRAWER'
         self.running = False
+        cv2.destroyWindow(self.name)
 
 class AveragingFilter:
     """ Calculates rolling average
@@ -282,6 +286,7 @@ class ImageProcessor:
         self.modelHist = None
         self.showFps = False
         self.servoEnabled = False
+        self.drawer = FrameDrawer("frame")
         
     def endImageProcessing(self):
         self.capturing = False
@@ -416,8 +421,8 @@ class ImageProcessor:
         self.capturing = True
     
         # setup the mouse callback
-        cv2.namedWindow("frame")
-        drawer = FrameDrawer("frame")
+        #cv2.namedWindow("frame")
+        self.drawer.start()
     
         roiBox = None
         
@@ -441,7 +446,7 @@ class ImageProcessor:
                 print "Could not read from camera exiting..."
                 break
             
-            drawer.updateFrame(frame, self.outputMode)
+            self.drawer.updateFrame(frame, self.outputMode)
     
             #outputFrame = frame.copy()
             
@@ -492,7 +497,7 @@ class ImageProcessor:
                         if self.servoEnabled:
                             self.adjustServo((xPos, yPos))
                         
-                        drawer.updateFrame(frame, self.outputMode)                                   
+                        self.drawer.updateFrame(frame, self.outputMode)                                   
                 else: #Tracking is lost therefore begin running redetectionAlg
                     redetectRoi = redetectionAlg(frame, self.modelHist, lastArea, 0.4)
                     if redetectRoi is not None:
@@ -506,7 +511,7 @@ class ImageProcessor:
                         self.drawOverlay(frame, numToDraw=frameRateNum)
                     
 
-                    drawer.updateFrame(frame, self.outputMode)
+                    self.drawer.updateFrame(frame, self.outputMode)
                     
 #                     print "TRACKING LOST " + str(trackingLost) + " fps=" + str(fps)
     
@@ -523,7 +528,7 @@ class ImageProcessor:
                     self.drawOverlay(frame, numToDraw=frameRateNum)
                     
 
-                drawer.updateFrame(frame, self.outputMode)
+                self.drawer.updateFrame(frame, self.outputMode)
 
 #                print "Tracking Off. Press 'i' to initiate. fps=" + str(fps)            
             
@@ -576,8 +581,8 @@ class ImageProcessor:
     
         # cleanup the camera and close any open windows
         #self.camera.release()
-        cv2.destroyWindow("frame")
-   
+        self.drawer.destroy()
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Perform Camshift Tracking.\nUsage: \t"i" to select ROI\n\t"q" to exit' , formatter_class=argparse.RawTextHelpFormatter)
     
