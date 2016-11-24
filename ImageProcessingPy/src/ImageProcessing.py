@@ -284,6 +284,18 @@ class ImageProcessor:
                 cv2.imshow('ModelHistogram', plotHsvHist(self.modelHist))
         else:
             cv2.destroyWindow('ModelHistogram')
+            
+    def setServo(self, enableServos):
+        if enableServos is True and self.servoEnabled is False:
+            try:
+                self.servoCtrl = ServoController('/dev/ttyACM0', 9600, 2)
+                self.servoEnabled = enableServos
+            except ValueError:
+                print "Failed to setup serial port!"
+                self.servoCtrl = None
+        elif enableServos is False and self.servoEnabled is True:
+            self.servoCtrl = None
+            self.servoEnabled = enableServos        
 
     def adjustServo(self, targetPoint):
         center = (self.resolution[0]/2, self.resolution[1]/2)
@@ -292,31 +304,21 @@ class ImageProcessor:
         dY = targetPoint[1] - center[1]
 
         if dX > 10:
-            self.servoCtrl.updatePan(1)
-        elif dX < -10:
             self.servoCtrl.updatePan(-1)
+        elif dX < -10:
+            self.servoCtrl.updatePan(1)
             
         if dY > 10:
-            self.servoCtrl.updateTilt(-1)
-        elif dY < -10:
             self.servoCtrl.updateTilt(1)
+        elif dY < -10:
+            self.servoCtrl.updateTilt(-1)
             
         self.servoCtrl.updateServoPosition()
 
     def setShowFps(self, showFps):
         self.showFps = showFps
 
-    def setServo(self, enableServos):
-        if enableServos is True and self.servoEnabled is False:
-            try:
-                self.servoCtrl = ServoController('COM3', 9600, 2)
-                self.servoEnabled = enableServos
-            except ValueError:
-                print "Failed to setup serial port!"
-                self.servoCtrl = None
-        elif enableServos is False and self.servoEnabled is True:
-            self.servoCtrl = None
-            self.servoEnabled = enableServos
+    
 
     def getDebug(self):
         return DEBUG
@@ -462,7 +464,7 @@ class ImageProcessor:
                         startTime = time.time()
                         
                         if self.servoEnabled:
-                            self.adjustServo((xPos, yPos))
+                            self.adjustServo((center[0], center[1]))
                         
                         self.displayOutput(frame)
                                    

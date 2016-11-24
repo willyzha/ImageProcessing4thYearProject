@@ -2,7 +2,7 @@ import serial
 import time
 
 PAN_CENTER = 90
-TILT_CENTER = 90
+TILT_CENTER = 60
 MAX_ANGLE = 180
 MIN_ANGLE = 0
 
@@ -14,7 +14,8 @@ class ServoController():
         self.serialPort = serial.Serial(self.port, self.baudRate, timeout=self.timeout)
         self.pan = PAN_CENTER
         self.tilt = TILT_CENTER
-        time.sleep(1)      
+        time.sleep(1)
+        self.updateServoPosition()
 
     #def setup(self):
         #self.serialPort = serial.Serial(self.port, self.baudRate, timeout=self.timeout)
@@ -30,6 +31,22 @@ class ServoController():
             self.pan = MIN_ANGLE
         else:
             self.pan = self.pan + step
+            
+    def setServoPosition(self, panPosition, tiltPosition):
+        if(panPosition>= MAX_ANGLE):
+            self.pan = MAX_ANGLE
+        elif(panPosition<=MIN_ANGLE):
+            self.pan = MIN_ANGLE
+        else:
+            self.pan = panPosition
+
+        if(tiltPosition >= MAX_ANGLE):
+            self.tilt = MAX_ANGLE
+        elif(tiltPosition <= MIN_ANGLE):
+            self.tilt = MIN_ANGLE
+        else:
+            self.tilt = tiltPosition
+            
         
     def updateTilt(self, step):
         if self.tilt+step >= MAX_ANGLE:
@@ -44,7 +61,7 @@ class ServoController():
         self.serialPort.write(str(self.pan)+" "+ str(self.tilt)+"\n")
     
 if __name__ == "__main__":
-    servoCtrl = ServoController('COM3', 9600, 2)
+    servoCtrl = ServoController('/dev/ttyACM0', 9600, 2)
     #servoCtrl.setup()
     angle = 90
     increment = 1;
@@ -54,9 +71,9 @@ if __name__ == "__main__":
         servoCtrl.updatePan(increment)
         servoCtrl.updateTilt(increment)
         servoCtrl.updateServoPosition()
+
         if angle <= 0:
             increment = 1
         elif angle >= 180:
             increment = -1
-            
-            
+              
