@@ -8,6 +8,7 @@ import time
 from math import sqrt
 from HistogramPlotter import plotHsvHist
 from ServoController import ServoController
+from threading import Thread
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -28,6 +29,40 @@ number = namedtuple('number', ['name', 'val', 'origin', 'color'])
 
 def buttonPress(event):
     print event
+    
+class FrameDrawer:
+    def __init__(self, frameName):
+        self.name = frameName    
+        self.latestFrame = None
+        self.running = True
+        self.start()
+        
+    def start(self):
+        Thread(target=self.frameUpdater, args=()).start()
+    
+    def updateFrame(self, frame, outputMode):
+        self.latestFrame = frame
+        self.outputMode = outputMode
+        
+    def frameUpdater(self):
+        while self.running:
+            if self.latestFrame is None:
+                continue
+            self.display(self.latestFrame)
+            cv2.waitKey(30) # wait 30ms
+    
+    def display(self, aFrame):
+        if self.outputMode is "BGR":
+            cv2.imshow(self.name, cv2.cvtColor(aFrame, cv2.COLOR_HSV2BGR))
+        elif self.outputMode is "HSVpure":
+            aFrame[:,:,2] = 255
+            aFrame[:,:,1] = 255
+            cv2.imshow(self.name, cv2.cvtColor(aFrame, cv2.COLOR_HSV2BGR))
+        elif self.outputMode is "HSVraw":
+            cv2.imshow(self.name, aFrame)
+    
+    def destroy(self):
+        self.running = False
 
 class AveragingFilter:
     """ Calculates rolling average
@@ -333,16 +368,6 @@ class ImageProcessor:
             cv2.circle(param, (x, y), 4, (60,255,255), 2)
             cv2.imshow("frame", cv2.cvtColor(param,cv2.COLOR_HSV2BGR))
 
-    def displayOutput(self, aFrame):
-        if self.outputMode is "BGR":
-            cv2.imshow("frame", cv2.cvtColor(aFrame, cv2.COLOR_HSV2BGR))
-        elif self.outputMode is "HSVpure":
-            aFrame[:,:,2] = 255
-            aFrame[:,:,1] = 255
-            cv2.imshow("frame", cv2.cvtColor(aFrame, cv2.COLOR_HSV2BGR))
-        elif self.outputMode is "HSVraw":
-            cv2.imshow("frame", aFrame)
-
     def drawOverlay(self, targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsToDraw=[], numToDraw=None):
         """ Draws crossHair, boxes, text and points on the targetFrame
             WARNING: DO NOT DRAW ON PROCESSING FRAME!!!
@@ -392,6 +417,7 @@ class ImageProcessor:
     
         # setup the mouse callback
         cv2.namedWindow("frame")
+        drawer = FrameDrawer("frame")
     
         roiBox = None
         
@@ -410,10 +436,12 @@ class ImageProcessor:
         while self.capturing:
             # grab the current frame
             (grabbed, frame) = self.camera.getFrame()
-
+            
             if not grabbed:
                 print "Could not read from camera exiting..."
                 break
+            
+            drawer.updateFrame(frame, self.outputMode)
     
             #outputFrame = frame.copy()
             
@@ -464,8 +492,7 @@ class ImageProcessor:
                         if self.servoEnabled:
                             self.adjustServo((xPos, yPos))
                         
-                        self.displayOutput(frame)
-                                   
+                        drawer.updateFrame(frame, self.outputMode)                                   
                 else: #Tracking is lost therefore begin running redetectionAlg
                     redetectRoi = redetectionAlg(frame, self.modelHist, lastArea, 0.4)
                     if redetectRoi is not None:
@@ -478,9 +505,8 @@ class ImageProcessor:
                         
                         self.drawOverlay(frame, numToDraw=frameRateNum)
                     
-                    startTime = time.time()
 
-                    self.displayOutput(frame)
+                    drawer.updateFrame(frame, self.outputMode)
                     
 #                     print "TRACKING LOST " + str(trackingLost) + " fps=" + str(fps)
     
@@ -496,9 +522,8 @@ class ImageProcessor:
                         
                     self.drawOverlay(frame, numToDraw=frameRateNum)
                     
-                startTime = time.time()
 
-                self.displayOutput(frame)
+                drawer.updateFrame(frame, self.outputMode)
 
 #                print "Tracking Off. Press 'i' to initiate. fps=" + str(fps)            
             
