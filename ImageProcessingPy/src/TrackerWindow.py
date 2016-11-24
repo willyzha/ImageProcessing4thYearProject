@@ -1,6 +1,5 @@
 import PySide.QtCore as QtCore
 import PySide.QtGui as QtGui
-from threading import Thread
 
 class Window(QtGui.QWidget):
     def __init__(self, imgProcessor):
@@ -82,8 +81,7 @@ class Window(QtGui.QWidget):
         self.end_button.setEnabled(True)
         self.end_button.setVisible(True)
         self.box2.setEnabled(True)
-        
-        Thread(target=self.imageProcessor.processImage(), args=()).start()
+        self.imageProcessor.processImage()
         
     def outputConfig(self, b):
         self.imageProcessor.setOutputMode(b.text())
@@ -92,11 +90,10 @@ class Window(QtGui.QWidget):
         print "endCapture"
         self.end_button.setEnabled(False)
         self.end_button.setVisible(False)
-        self.imageProcessor.endImageProcessing()
         self.start_button.setVisible(True)
         self.start_button.setEnabled(True)
         self.box2.setEnabled(False)
-        
+        self.imageProcessor.endImageProcessing()
         
     def quitCapture(self):
         print "quitCapture"
