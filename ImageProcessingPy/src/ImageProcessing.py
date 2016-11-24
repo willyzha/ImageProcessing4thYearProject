@@ -8,6 +8,7 @@ import time
 from math import sqrt
 from HistogramPlotter import plotHsvHist
 from ServoController import ServoController
+from threading import Thread
 
 # initialize the current frame of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -342,6 +343,8 @@ class ImageProcessor:
             cv2.imshow("frame", cv2.cvtColor(aFrame, cv2.COLOR_HSV2BGR))
         elif self.outputMode is "HSVraw":
             cv2.imshow("frame", aFrame)
+            
+        cv2.waitKey(1)
 
     def drawOverlay(self, targetFrame,crossHair=None, boxPts=None, textToDraw=[], pointsToDraw=[], numToDraw=None):
         """ Draws crossHair, boxes, text and points on the targetFrame
@@ -391,7 +394,7 @@ class ImageProcessor:
         self.capturing = True
     
         # setup the mouse callback
-        cv2.namedWindow("frame")
+        #cv2.namedWindow("frame")
     
         roiBox = None
         
@@ -464,7 +467,8 @@ class ImageProcessor:
                         if self.servoEnabled:
                             self.adjustServo((xPos, yPos))
                         
-                        self.displayOutput(frame)
+                        cv2.namedWindow("frame")
+                        Thread(target=self.displayOutput, args=([frame])).start()
                                    
                 else: #Tracking is lost therefore begin running redetectionAlg
                     redetectRoi = redetectionAlg(frame, self.modelHist, lastArea, 0.4)
@@ -479,8 +483,8 @@ class ImageProcessor:
                         self.drawOverlay(frame, numToDraw=frameRateNum)
                     
                     startTime = time.time()
-
-                    self.displayOutput(frame)
+                    cv2.namedWindow("frame")
+                    Thread(target=self.displayOutput, args=([frame])).start()
                     
 #                     print "TRACKING LOST " + str(trackingLost) + " fps=" + str(fps)
     
@@ -497,11 +501,11 @@ class ImageProcessor:
                     self.drawOverlay(frame, numToDraw=frameRateNum)
                     
                 startTime = time.time()
-
-                self.displayOutput(frame)
+                cv2.namedWindow("frame")
+                Thread(target=self.displayOutput, args=([frame])).start()
 
 #                print "Tracking Off. Press 'i' to initiate. fps=" + str(fps)            
-            
+
             key = cv2.waitKey(1) & 0xFF
     
             # handle if the 'i' key is pressed, then go into ROI
