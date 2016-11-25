@@ -3,7 +3,7 @@ import time
 
 PAN_CENTER = 90
 TILT_CENTER = 60
-MAX_ANGLE = 180
+MAX_ANGLE = 145
 MIN_ANGLE = 0
 
 class ServoController():
@@ -65,6 +65,11 @@ if __name__ == "__main__":
     #servoCtrl.setup()
     angle = 90
     increment = 1;
+    servoCtrl.updatePan(50)
+    servoCtrl.updateTilt(30)
+    servoCtrl.updateServoPosition()
+    time.sleep(0.1)    
+            
     while True:
         time.sleep(0.01)
         angle = angle + increment
@@ -74,6 +79,6 @@ if __name__ == "__main__":
 
         if angle <= 0:
             increment = 1
-        elif angle >= 180:
+        elif angle >= 145:
             increment = -1
               
