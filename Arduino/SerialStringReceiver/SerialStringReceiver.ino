@@ -13,7 +13,7 @@ void setup(){
  // Open serial connection.
  Serial.begin(9600);
  Serial.setTimeout(1000);
- pinMode(ledRed, OUTPUT);     
+ pinMode(ledRed, OUTPUT);
 
   panServo.attach(9, 550, 2350);  // attaches the servo on pin 9 to the servo object
   tiltServo.attach(8, 550, 2350);
@@ -46,5 +46,4 @@ void loop(){
      //    tiltServo.write(yawAngle);
 
    }
-
 }
