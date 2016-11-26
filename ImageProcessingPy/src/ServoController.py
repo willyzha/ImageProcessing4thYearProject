@@ -2,7 +2,7 @@ import serial
 import time
 
 PAN_CENTER = 90
-TILT_CENTER = 60
+TILT_CENTER = 80
 MAX_ANGLE = 145
 MIN_ANGLE = 0
 
@@ -57,7 +57,8 @@ class ServoController():
             self.tilt = self.tilt + step
         
     def updateServoPosition(self):
-        print str(self.pan)
+        print str(self.pan), str(self.tilt)
+       
         self.serialPort.write(str(self.pan)+" "+ str(self.tilt)+"\n")
     
 if __name__ == "__main__":

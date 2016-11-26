@@ -303,14 +303,14 @@ class ImageProcessor:
         angleBuffer = 3
         dX = targetPoint[0] - center[0]
         dY = targetPoint[1] - center[1]
-        print str(dX)
+        #print str(dX)
         horizontalShift = int((1.0*dX/(self.resolution[0]/2))*(26/2))
         if dX > pixelTolerance:
             self.servoCtrl.updatePan(horizontalShift)
-            print "move Right by " + str(horizontalShift)
+            #print "move Right by " + str(horizontalShift)
         elif dX < -pixelTolerance:
             self.servoCtrl.updatePan(horizontalShift)
-            print "move Left by " + str(horizontalShift)
+            #print "move Left by " + str(horizontalShift)
             
         if dY > pixelTolerance:
             self.servoCtrl.updateTilt(1)
