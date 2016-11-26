@@ -293,17 +293,12 @@ class ImageProcessor:
         dY = targetPoint[1] - center[1]
         print str(dX)
         horizontalShift = int((1.0*dX/(self.resolution[0]/2))*(26/2))
-        if dX > pixelTolerance:
+        verticalShift = int((1.0*dY/(self.resolution[1]/2))*(20/2))
+        if dX > pixelTolerance or dX < -pixelTolerance:
             self.servoCtrl.updatePan(horizontalShift)
-            print "move Right by " + str(horizontalShift)
-        elif dX < -pixelTolerance:
-            self.servoCtrl.updatePan(horizontalShift)
-            print "move Left by " + str(horizontalShift)
-            
-        if dY > pixelTolerance:
-            self.servoCtrl.updateTilt(1)
-        elif dY < -pixelTolerance:
-            self.servoCtrl.updateTilt(-1)
+
+        if dY > pixelTolerance or dY < -pixelTolerance:
+            self.servoCtrl.updateTilt(verticalShift)
             
         self.servoCtrl.updateServoPosition()
 
