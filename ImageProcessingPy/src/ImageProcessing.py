@@ -297,29 +297,20 @@ class ImageProcessor:
             self.servoCtrl = None
             self.servoEnabled = enableServos        
 
-    def setServo(self, enableServos):
-        if enableServos is True and self.servoEnabled is False:
-            try:
-                self.servoCtrl = ServoController('COM3', 9600, 2)
-                self.servoEnabled = enableServos
-            except ValueError:
-                print "Failed to setup serial port!"
-                self.servoCtrl = None
-        elif enableServos is False and self.servoEnabled is True:
-            self.servoCtrl = None
-            self.servoEnabled = enableServos
-
     def adjustServo(self, targetPoint):
         center = (self.resolution[0]/2, self.resolution[1]/2)
         pixelTolerance = 30
         angleBuffer = 3
         dX = targetPoint[0] - center[0]
         dY = targetPoint[1] - center[1]
-
+        print str(dX)
+        horizontalShift = int((1.0*dX/(self.resolution[0]/2))*(26/2))
         if dX > pixelTolerance:
-            self.servoCtrl.updatePan(-dX/(resolution[0]/2)*26+3)
+            self.servoCtrl.updatePan(horizontalShift)
+            print "move Right by " + str(horizontalShift)
         elif dX < -pixelTolerance:
-            self.servoCtrl.updatePan(dX/(resolution[0]/2)*26-3)
+            self.servoCtrl.updatePan(horizontalShift)
+            print "move Left by " + str(horizontalShift)
             
         if dY > pixelTolerance:
             self.servoCtrl.updateTilt(1)
