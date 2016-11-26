@@ -299,19 +299,20 @@ class ImageProcessor:
 
     def adjustServo(self, targetPoint):
         center = (self.resolution[0]/2, self.resolution[1]/2)
-        
+        pixelTolerance = 30
+        angleBuffer = 3
         dX = targetPoint[0] - center[0]
         dY = targetPoint[1] - center[1]
 
-        if dX > 10:
-            self.servoCtrl.updatePan(1)
-        elif dX < -10:
-            self.servoCtrl.updatePan(-1)
+        if dX > pixelTolerance:
+            self.servoCtrl.updatePan(-dX/(resolution[0]/2)*26+3)
+        elif dX < -pixelTolerance:
+            self.servoCtrl.updatePan(dX/(resolution[0]/2)*26-3)
             
-        if dY > 10:
-            self.servoCtrl.updateTilt(-1)
-        elif dY < -10:
+        if dY > pixelTolerance:
             self.servoCtrl.updateTilt(1)
+        elif dY < -pixelTolerance:
+            self.servoCtrl.updateTilt(-1)
             
         self.servoCtrl.updateServoPosition()
 
