@@ -1,10 +1,14 @@
+#include <Arduino.h>
 #include <Servo.h>
+
 // Open a serial connection and flash LED when input is received
 
 int ledRed = 4;      // LED connected to digital pin 4
 Servo panServo;  // create servo object to control a servo
 Servo tiltServo;
 
+int panVal = 90;
+int tiltVal =30;
 void setup(){
  // Open serial connection.
  Serial.begin(9600);
@@ -13,19 +17,34 @@ void setup(){
 
   panServo.attach(9, 550, 2350);  // attaches the servo on pin 9 to the servo object
   tiltServo.attach(8, 550, 2350);
+  delay(500);
+  panServo.write(panVal);
+  tiltServo.write(tiltVal);
 }
-
+int servoDirection;
+int servoVal;
+int inputKey;
 void loop(){
  if(Serial.available() > 0){      // if data present, blink
-       String text = Serial.readStringUntil('\n');
-
-       int panAngle = text.substring(0, text.indexOf(" ")).toInt();
-       int yawAngle = text.substring(text.indexOf(" "), text.indexOf("\n")).toInt();
+    //   String text = Serial.readStringUntil('\n');
+      Serial.println("testing");
+      // int panAngle = text.substring(0, text.indexOf(" ")).toInt();
+       //int yawAngle = text.substring(text.indexOf(" "), text.indexOf("\n")).toInt();
        //Serial.println(angle);
+      servoDirection = Serial.parseInt();
+      servoVal = Serial.parseInt();
 
-
-         panServo.write(panAngle);
-         tiltServo.write(yawAngle);
+      if(servoDirection==1){
+        tiltServo.write(servoVal);
+        Serial.print("tilt to angle: "); Serial.println(servoVal);
+      }else if (servoDirection ==2){
+        panServo.write(servoVal);
+        Serial.print("pan to  angle: "); Serial.println(servoVal);
+      }       
+     
+    //  panServo.write(panAngle);
+     //    tiltServo.write(yawAngle);
 
    }
+
 }
