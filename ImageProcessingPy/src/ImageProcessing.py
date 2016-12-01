@@ -79,15 +79,17 @@ class RunningAvgStd:
         else:
             return True
     
-def compareHist(frame, roiWindow, refHist, mask):  
+def compareHist(frame, roiWindow, refHist, lowerb, upperb):  
     """ Compares the histogram of the roiWindow in frameHsv with refHist
     """
+
     # Get the submatrix for the region of interest and convert to HSV
     roi = frame[roiWindow[1]:roiWindow[1]+roiWindow[3], roiWindow[0]:roiWindow[0]+roiWindow[2]]
+
     #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
    
     # Use the same mask from the original histogram generation
-    #mask  = getHSVMask(roi, LOWER_MASK_BOUND, UPPER_MASK_BOUND)
+    mask  = cv2.inRange(roi, lowerb, upperb)
     
     # Calculate the histogram for the region of interest
     newHist = cv2.calcHist([roi], [0], mask, [16], [0, 180])
@@ -183,6 +185,9 @@ class ImageProcessor:
         
     def onmouse(self, event, x, y, flags, param):
         x, y = np.int16([x, y]) # BUG
+
+        #if self.tracking_state:
+        #    return
 
         if event == cv2.EVENT_LBUTTONDOWN:
             self.drag_start = (x, y)
@@ -364,9 +369,11 @@ class ImageProcessor:
         while self.capturing:
             startTime = time.time()
             ret, self.frameHsv = self.camera.getFrame()
-            vis = self.convertFrame(self.frameHsv.copy())
+            vis = self.convertFrame(self.frameHsv)
             #hsv = cv2.cvtColor(self.frameHsv, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(self.frameHsv, np.array((0., 60., 32.)), np.array((180., 255., 255.)))
+            lowerb = np.array((0., 60., 32.))
+            upperb = np.array((180., 255., 255.))
+            mask = cv2.inRange(self.frameHsv, lowerb, upperb)
 
             # calculate histogram
             if self.selection:
@@ -395,6 +402,8 @@ class ImageProcessor:
                 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
 
+                diff = compareHist(self.frameHsv, self.track_window, self.modelHist, lowerb, upperb)
+
                 if self.show_backproj:
                     vis[:] = prob[...,np.newaxis]
                 try:
@@ -417,7 +426,8 @@ class ImageProcessor:
                                  pointsToDraw=[centerPoint], 
                                  numToDraw=frameRateNum)
 
-            cv2.imshow("camshift", vis)
+            if self.outputMode is not "None":
+                cv2.imshow("camshift", vis)
 
             ch = 0xFF & cv2.waitKey(1)
             if ch == 27:
