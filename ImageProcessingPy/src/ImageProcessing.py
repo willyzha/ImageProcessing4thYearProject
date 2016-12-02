@@ -178,6 +178,10 @@ class ImageProcessor:
             Outputs: 
                 matchedRect: Most probable rectangle around object. None if no matches were found
         """
+        
+        if aRoiHist is None:
+            return
+        
         # Step1: Find HSV back projection of the frameHsv
         #hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
         hsv = aFrame
@@ -392,6 +396,7 @@ class ImageProcessor:
 
             # calculate histogram
             if self.selection:
+                targetLost = False
                 x0, y0, x1, y1 = self.selection
                 self.track_window = (x0, y0, x1-x0, y1-y0)
                 hsv_roi = self.frameHsv[y0:y1, x0:x1]
