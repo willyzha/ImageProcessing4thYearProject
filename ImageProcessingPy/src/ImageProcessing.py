@@ -72,10 +72,13 @@ class RunningAvgStd:
     def getMeanStd(self):
         return (self.mean, self.std)
     
+    def getThreshold(self, nrStd):
+        return self.mean + nrStd * self.std
+    
     def inRange(self, data, nrStd):
         # For best results this should be checked before calling update
         if self.count > 100:
-            return data <= self.mean + nrStd * self.std
+            return data <= self.getThreshold(nrStd)
         else:
             return True
     
@@ -111,56 +114,6 @@ def calculateFrameRate(deltaT):
         return -1
     return int(round(1/deltaT))
 
-def redetectionAlg(aFrame, aRoiHist, aLastArea, aDiffThresh, mask):
-    """ Algorithm for redetecting the object after it is lost
-        Inputs:
-            aFrame: Frame in which the object is to be searched for
-            aRoiHist: The pre-calculated Hue histogram for the object of interest
-            aLastArea: The area of ROI of the object when last seen
-            aDiffThresh: Min difference threshold to determine the object is found
-        Outputs: 
-            matchedRect: Most probable rectangle around object. None if no matches were found
-    """
-    # Step1: Find HSV back projection of the frameHsv
-    #hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
-    hsv = aFrame
-    backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
-    
-    # Step2: Binarize Back Projection
-    _, threshold = cv2.threshold(backProj, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-       
-    # Step3: Erode and Dilate
-    kernel = np.ones((5,5),np.uint8)
-    maskedThresh = cv2.morphologyEx(threshold, cv2.MORPH_OPEN, kernel)
-
-    # NOTE WZ: can try cv2.CHAIN_APPROX_NONE for no approximation
-    _, contours, _ = cv2.findContours(maskedThresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
-    # Step4: Find candidate regions with appropriate size of 30%
-    candidateContours = []
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        if area >= (aLastArea * 0.3):
-            candidateContours.append(contour)
-
-    if False:#DEBUG:
-        contourFrame = aFrame.copy()
-        cv2.drawContours(contourFrame, candidateContours, -1, (0, 255,0), 3)
-        cv2.imshow("DEBUG: Contours with 30% area", contourFrame)
-
-    # Step5: Look through candidate contours and select the one with lowest diff that is below the diff threshold
-    matchedRect = None
-    minDiff = 1 # max diff is 1
-    for contour in candidateContours:
-        boundingRect = cv2.boundingRect(contour)       
-        diff = compareHist(aFrame, boundingRect, aRoiHist)
-
-        if diff < aDiffThresh and diff < minDiff:
-            minDiff = diff
-            matchedRect = boundingRect
-
-    return matchedRect
-
 class ImageProcessor:
     def __init__(self, cameraModule, res, avgFilterN):
         self.capturing = False
@@ -186,8 +139,8 @@ class ImageProcessor:
     def onmouse(self, event, x, y, flags, param):
         x, y = np.int16([x, y]) # BUG
 
-        #if self.tracking_state:
-        #    return
+        if self.tracking_state:
+            return
 
         if event == cv2.EVENT_LBUTTONDOWN:
             self.drag_start = (x, y)
@@ -207,6 +160,56 @@ class ImageProcessor:
                 self.drag_start = None
                 if self.selection is not None:
                     self.tracking_state = 1
+                    
+    def redetectionAlg(self, aFrame, aRoiHist, aLastArea, aDiffThresh, lowerb, upperb):
+        """ Algorithm for redetecting the object after it is lost
+            Inputs:
+                aFrame: Frame in which the object is to be searched for
+                aRoiHist: The pre-calculated Hue histogram for the object of interest
+                aLastArea: The area of ROI of the object when last seen
+                aDiffThresh: Min difference threshold to determine the object is found
+            Outputs: 
+                matchedRect: Most probable rectangle around object. None if no matches were found
+        """
+        # Step1: Find HSV back projection of the frameHsv
+        #hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
+        hsv = aFrame
+        backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
+        
+        # Step2: Binarize Back Projection
+        _, threshold = cv2.threshold(backProj, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+           
+        # Step3: Erode and Dilate
+        kernel = np.ones((5,5),np.uint8)
+        maskedThresh = cv2.morphologyEx(threshold, cv2.MORPH_OPEN, kernel)
+    
+        # NOTE WZ: can try cv2.CHAIN_APPROX_NONE for no approximation
+        _, contours, _ = cv2.findContours(maskedThresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Step4: Find candidate regions with appropriate size of 30%
+        candidateContours = []
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area >= (aLastArea * 0.3):
+                candidateContours.append(contour)
+    
+        if False:#DEBUG:
+            contourFrame = aFrame.copy()
+            cv2.drawContours(contourFrame, candidateContours, -1, (0, 255,0), 3)
+            cv2.imshow("DEBUG: Contours with 30% area", contourFrame)
+    
+        # Step5: Look through candidate contours and select the one with lowest diff that is below the diff threshold
+        matchedRect = None
+        minDiff = 1 # max diff is 1
+        for contour in candidateContours:
+            boundingRect = cv2.boundingRect(contour)       
+            diff = compareHist(aFrame, boundingRect, aRoiHist, lowerb, upperb)
+    
+            if diff < aDiffThresh and diff < minDiff:
+                minDiff = diff
+                matchedRect = boundingRect
+    
+        return matchedRect
 
     def resetImageProcessing(self):
         self.tracking_state = 0
@@ -366,12 +369,16 @@ class ImageProcessor:
         cv2.namedWindow('camshift')
         cv2.setMouseCallback('camshift', self.onmouse, self.frameHsv)
         
+        targetLost = False
+        
+        diffAvgStd = RunningAvgStd()
+        
         while self.capturing:
             startTime = time.time()
             ret, self.frameHsv = self.camera.getFrame()
-            vis = self.convertFrame(self.frameHsv)
+            vis = self.convertFrame(self.frameHsv.copy())
             #hsv = cv2.cvtColor(self.frameHsv, cv2.COLOR_BGR2HSV)
-            lowerb = np.array((0., 60., 32.))
+            lowerb = np.array((0., 50., 20.))
             upperb = np.array((180., 255., 255.))
             mask = cv2.inRange(self.frameHsv, lowerb, upperb)
 
@@ -391,8 +398,14 @@ class ImageProcessor:
                 cv2.bitwise_not(vis_roi, vis_roi)
                 vis[mask == 0] = 0
 
+            if targetLost:
+                lastArea = self.track_window[2] * self.track_window[3] 
+                redetectedRoi = self.redetectionAlg(self.frameHsv, self.modelHist, lastArea, diffAvgStd.getThreshold(3), lowerb, upperb)
+                if redetectedRoi is not None:
+                    self.track_window = redetectedRoi
+                    targetLost = False
             # Track object
-            if self.tracking_state == 1:
+            elif self.tracking_state == 1:
                 self.selection = None
                 # calculate back projected image
                 prob = cv2.calcBackProject([self.frameHsv], [0], self.modelHist, [0, 180], 1)
@@ -403,6 +416,12 @@ class ImageProcessor:
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
 
                 diff = compareHist(self.frameHsv, self.track_window, self.modelHist, lowerb, upperb)
+                print diffAvgStd.getThreshold(3), diffAvgStd.inRange(diff, 3)
+                
+                diffAvgStd.update(diff)
+                if not diffAvgStd.inRange(diff, 3):
+                    print "target lost"
+                    targetLost = True
 
                 if self.show_backproj:
                     vis[:] = prob[...,np.newaxis]
@@ -413,6 +432,7 @@ class ImageProcessor:
                 
                 center = track_box[0]
                 centerPoint = point('Coordinates', center[0], center[1], (255,0,0), '('+str(center[0])+','+str(center[1])+')')
+                diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,self.resolution[1]-10), (0,255,0))
                 
                 frameRateNum = None
                 if self.showFps:
@@ -422,18 +442,18 @@ class ImageProcessor:
                 self.drawOverlay(vis, 
                                  crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10), 
                                  boxPts=None, 
-                                 textToDraw=[], 
+                                 textToDraw=[diffText], 
                                  pointsToDraw=[centerPoint], 
                                  numToDraw=frameRateNum)
 
-            if self.outputMode is not "None":
+            if self.outputMode is not "None" and vis is not None:
                 cv2.imshow("camshift", vis)
 
-            ch = 0xFF & cv2.waitKey(1)
-            if ch == 27:
-                break
-            if ch == ord('b'):
-                self.show_backproj = not self.show_backproj
+                ch = 0xFF & cv2.waitKey(1)
+                if ch == 27:
+                    break
+                if ch == ord('b'):
+                    self.show_backproj = not self.show_backproj
         cv2.destroyWindow('camshift')
    
 if __name__ == "__main__":
