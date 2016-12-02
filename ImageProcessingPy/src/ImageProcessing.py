@@ -81,6 +81,11 @@ class RunningAvgStd:
             return data <= self.getThreshold(nrStd)
         else:
             return True
+        
+    def reset(self):
+        self.count = 0
+        self.mean = 0
+        self.std = 0
     
 def compareHist(frame, roiWindow, refHist, lowerb, upperb):  
     """ Compares the histogram of the roiWindow in frameHsv with refHist
@@ -127,6 +132,8 @@ class ImageProcessor:
         self.showFps = False
         self.servoEnabled = False
         self.debug = False
+        
+        self.diffAvgStd = RunningAvgStd()
         
         self.selection = None
         self.drag_start = None
@@ -214,6 +221,7 @@ class ImageProcessor:
     def resetImageProcessing(self):
         self.tracking_state = 0
         self.modelHist = None
+        self.diffAvgStd.reset()
         
     def endImageProcessing(self):
         self.capturing = False
@@ -371,7 +379,7 @@ class ImageProcessor:
         
         targetLost = False
         
-        diffAvgStd = RunningAvgStd()
+        
         
         while self.capturing:
             startTime = time.time()
@@ -400,7 +408,7 @@ class ImageProcessor:
 
             if targetLost:
                 lastArea = self.track_window[2] * self.track_window[3] 
-                redetectedRoi = self.redetectionAlg(self.frameHsv, self.modelHist, lastArea, diffAvgStd.getThreshold(3), lowerb, upperb)
+                redetectedRoi = self.redetectionAlg(self.frameHsv, self.modelHist, lastArea, self.diffAvgStd.getThreshold(3), lowerb, upperb)
                 if redetectedRoi is not None:
                     self.track_window = redetectedRoi
                     targetLost = False
@@ -416,10 +424,10 @@ class ImageProcessor:
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
 
                 diff = compareHist(self.frameHsv, self.track_window, self.modelHist, lowerb, upperb)
-                print diffAvgStd.getThreshold(3), diffAvgStd.inRange(diff, 3)
+                print self.diffAvgStd.getThreshold(3), self.diffAvgStd.inRange(diff, 3)
                 
-                diffAvgStd.update(diff)
-                if not diffAvgStd.inRange(diff, 3):
+                self.diffAvgStd.update(diff)
+                if not self.diffAvgStd.inRange(diff, 3):
                     print "target lost"
                     targetLost = True
 
