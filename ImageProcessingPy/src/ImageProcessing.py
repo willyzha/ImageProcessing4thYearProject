@@ -198,24 +198,38 @@ class ImageProcessor:
     
         # NOTE WZ: can try cv2.CHAIN_APPROX_NONE for no approximation
         _, contours, _ = cv2.findContours(maskedThresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        
+             
         # Step4: Find candidate regions with appropriate size of 30%
-        candidateContours = []
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if area >= (aLastArea * 0.3):
-                candidateContours.append(contour)
-    
+        candidateEllipse = []
+        largestArea = 0
+        for contour in contours: 
+            if len(contour) < 5:
+                continue
+            ellipse = cv2.fitEllipse(contour)
+            area = ellipse[1][0] * ellipse[1][1] * 3.14
+            if area > largestArea:
+                largestArea = area
+                
+            if area >= (aLastArea * 0.5):
+                candidateEllipse.append(ellipse)
+        
+        #print largestArea, aLastArea * 0.3        
+        
         if self.debug:
-            contourFrame = aFrame.copy()
-            cv2.drawContours(contourFrame, candidateContours, -1, (0, 255,0), 3)
-            cv2.imshow("DEBUG: Contours with 30% area", contourFrame)
+            cv2.imshow("threshold", threshold)
+            cv2.imshow("maskedThresh", maskedThresh)
+            allContoursFrame = hsv.copy()
+            cv2.drawContours(allContoursFrame, contours, -1, (0, 255,0), 2)
+            for el in candidateEllipse:
+                cv2.ellipse(allContoursFrame, el, (0, 0, 255), 2)
+            cv2.imshow("allContoursFrame", allContoursFrame)
     
         # Step5: Look through candidate contours and select the one with lowest diff that is below the diff threshold
         matchedRect = None
         minDiff = 1 # max diff is 1
-        for contour in candidateContours:
-            boundingRect = cv2.boundingRect(contour)       
+        for ellipse in candidateEllipse:
+            boundingRect = cv2.boundingRect(cv2.boxPoints(ellipse))
+            print boundingRect 
             diff = compareHist(aFrame, boundingRect, aRoiHist, lowerb, upperb)
     
             print "diff " + str(diff) + "diffThresh " + str(aDiffThresh)
@@ -386,7 +400,7 @@ class ImageProcessor:
         cv2.setMouseCallback('camshift', self.onmouse, self.frameHsv)
         
         targetLost = False
-        
+        track_box = None
         
         
         while self.capturing:
@@ -398,7 +412,7 @@ class ImageProcessor:
             vis = self.convertFrame(self.frameHsv.copy(), mask)
             #hsv = cv2.cvtColor(self.frameHsv, cv2.COLOR_BGR2HSV)
 
-
+            
             # calculate histogram
             if self.selection:
                 targetLost = False
@@ -417,7 +431,8 @@ class ImageProcessor:
                 vis[mask == 0] = 0
 
             if targetLost:
-                lastArea = self.track_window[2] * self.track_window[3] 
+                print track_box
+                lastArea = track_box[1][0] * track_box[1][1] * 3.14
                 redetectedRoi = self.redetectionAlg(self.frameHsv, self.modelHist, lastArea, self.diffAvgStd.getThreshold(3), lowerb, upperb)
                 if redetectedRoi is not None:
                     self.track_window = redetectedRoi
@@ -432,10 +447,10 @@ class ImageProcessor:
                 #set termination criteria and find new object location
                 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
-
+                
                 diff = compareHist(self.frameHsv, self.track_window, self.modelHist, lowerb, upperb)
                 print self.diffAvgStd.getThreshold(3), self.diffAvgStd.inRange(diff, 3)
-                
+                print "area= " + str(track_box[1][0] * track_box[1][1] * 3.14)
                 self.diffAvgStd.update(diff)
                 if not self.diffAvgStd.inRange(diff, 3):
                     print "target lost"
