@@ -229,11 +229,8 @@ class ImageProcessor:
         minDiff = 1 # max diff is 1
         for ellipse in candidateEllipse:
             boundingRect = cv2.boundingRect(cv2.boxPoints(ellipse))
-            print boundingRect 
             diff = compareHist(aFrame, boundingRect, aRoiHist, lowerb, upperb)
-    
-            print "diff " + str(diff) + "diffThresh " + str(aDiffThresh)
-    
+      
             if diff < aDiffThresh and diff < minDiff:
                 minDiff = diff
                 matchedRect = boundingRect
@@ -431,7 +428,6 @@ class ImageProcessor:
                 vis[mask == 0] = 0
 
             if targetLost:
-                print track_box
                 lastArea = track_box[1][0] * track_box[1][1] * 3.14
                 redetectedRoi = self.redetectionAlg(self.frameHsv, self.modelHist, lastArea, self.diffAvgStd.getThreshold(3), lowerb, upperb)
                 if redetectedRoi is not None:
@@ -449,8 +445,6 @@ class ImageProcessor:
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
                 
                 diff = compareHist(self.frameHsv, self.track_window, self.modelHist, lowerb, upperb)
-                print self.diffAvgStd.getThreshold(3), self.diffAvgStd.inRange(diff, 3)
-                print "area= " + str(track_box[1][0] * track_box[1][1] * 3.14)
                 self.diffAvgStd.update(diff)
                 if not self.diffAvgStd.inRange(diff, 3):
                     print "target lost"
@@ -470,7 +464,7 @@ class ImageProcessor:
                 frameRateNum = None
                 if self.showFps:
                     fps = calculateFrameRate(time.time() - startTime)
-                    frameRateNum = number('fps', fps, (self.resolution[0]-25,15), (120,0,0))
+                    frameRateNum = number('fps', fps, (self.resolution[0]-25,15), (0,255,0))
         
                 self.drawOverlay(vis, 
                                  crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10), 
