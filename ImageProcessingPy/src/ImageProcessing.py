@@ -186,6 +186,8 @@ class ImageProcessor:
         #hsv = cv2.cvtColor(aFrame, cv2.COLOR_BGR2HSV)
         hsv = aFrame
         backProj = cv2.calcBackProject([hsv], [0], aRoiHist, [0, 180], 1)
+        mask = cv2.inRange(hsv, lowerb, upperb)
+        backProj &= mask
         
         # Step2: Binarize Back Projection
         _, threshold = cv2.threshold(backProj, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
@@ -204,7 +206,7 @@ class ImageProcessor:
             if area >= (aLastArea * 0.3):
                 candidateContours.append(contour)
     
-        if False:#DEBUG:
+        if self.debug:
             contourFrame = aFrame.copy()
             cv2.drawContours(contourFrame, candidateContours, -1, (0, 255,0), 3)
             cv2.imshow("DEBUG: Contours with 30% area", contourFrame)
@@ -215,6 +217,8 @@ class ImageProcessor:
         for contour in candidateContours:
             boundingRect = cv2.boundingRect(contour)       
             diff = compareHist(aFrame, boundingRect, aRoiHist, lowerb, upperb)
+    
+            print "diff " + str(diff) + "diffThresh " + str(aDiffThresh)
     
             if diff < aDiffThresh and diff < minDiff:
                 minDiff = diff
@@ -310,7 +314,7 @@ class ImageProcessor:
             cv2.circle(param, (x, y), 4, (60,255,255), 2)
             cv2.imshow("frameHsv", cv2.cvtColor(param,cv2.COLOR_HSV2BGR))
 
-    def convertFrame(self, aFrame):
+    def convertFrame(self, aFrame, mask):
         if self.outputMode is "BGR":
             return cv2.cvtColor(aFrame, cv2.COLOR_HSV2BGR)
         elif self.outputMode is "HSVpure":
@@ -321,7 +325,7 @@ class ImageProcessor:
             if self.modelHist is None:
                 return aFrame
             else:
-                return cv2.calcBackProject([aFrame], [0], self.modelHist, [0, 180], 1)
+                return cv2.calcBackProject([aFrame], [0], self.modelHist, [0, 180], 1) & mask
             
         cv2.waitKey(1)
 
@@ -388,11 +392,12 @@ class ImageProcessor:
         while self.capturing:
             startTime = time.time()
             ret, self.frameHsv = self.camera.getFrame()
-            vis = self.convertFrame(self.frameHsv.copy())
-            #hsv = cv2.cvtColor(self.frameHsv, cv2.COLOR_BGR2HSV)
-            lowerb = np.array((0., 50., 20.))
+            lowerb = np.array((0., 50., 32.))
             upperb = np.array((180., 255., 255.))
             mask = cv2.inRange(self.frameHsv, lowerb, upperb)
+            vis = self.convertFrame(self.frameHsv.copy(), mask)
+            #hsv = cv2.cvtColor(self.frameHsv, cv2.COLOR_BGR2HSV)
+
 
             # calculate histogram
             if self.selection:
