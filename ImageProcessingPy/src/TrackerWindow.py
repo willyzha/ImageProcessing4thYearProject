@@ -119,3 +119,6 @@ class Window(QtGui.QWidget):
         
     def changeServoMode(self, cb):
         self.imageProcessor.setServo(cb.isChecked())
+
+    def closeEvent(self, event):
+        self.quitCapture()
