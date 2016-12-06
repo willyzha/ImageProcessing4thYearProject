@@ -49,6 +49,7 @@ class SerialData(object):
                 data = {}
                 timeStamp = time.time() - zeroTime
                 for d in raw_line.split():
+                    print d
                     key = d.split(':')[0]
                     val = d.split(':')[1]
                     data[key] = (timeStamp, val)
@@ -64,12 +65,12 @@ class SerialData(object):
             self.serial_port.close()
 
 if __name__ == '__main__':
-    s = SerialData('COM3', 9600, timeout=1) # port=/dev/ttyS[0123] for raspberry pi
-    plt.ion()
-    plot = True
+    s = SerialData('COM3', 115200, timeout=1) # port=/dev/ttyS[0123] for raspberry pi
+    #plt.ion()
+    plot = False
     data = {}
     for i in range(500):
-        #time.sleep(.0015)
+        time.sleep(.0015)
         ret = s.next()
         
         if ret is not None:
@@ -85,7 +86,7 @@ if __name__ == '__main__':
             plt.hold(True)
             plt.plot(data['test']['time'], data['test']['val']) #PUT THE NAME OF PLOT YOU WANT HERE
             plt.draw()
-        plt.pause(0.0015)
+        #plt.pause(0.0015)
         
     w = csv.writer(open("temp.csv", "w"))
     for key, val in data.items():
