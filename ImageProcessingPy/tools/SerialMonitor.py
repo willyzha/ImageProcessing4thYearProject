@@ -67,6 +67,7 @@ class SerialData(object):
                 data = {}
                 timeStamp = time.time() - zeroTime
                 for d in raw_line.split():
+                    print d
                     key = d.split(':')[0]
                     val = d.split(':')[1]
                     data[key] = (timeStamp, val)
@@ -115,3 +116,4 @@ if __name__ == '__main__':
     
     runTread = False
     print "done!"
+
