@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import csv
 import cv2
 import platform
+import termios
+import sys
 
 last_received = ''
 runTread = False
@@ -51,8 +53,12 @@ def plot():
 class SerialData(object):
     def __init__(self, port, baud, timeout):
         try:
-            self.serial_port = serial.Serial(port, baud, timeout=timeout)
+            self.serial_port = serial.Serial()
+            self.serial_port.port = port
+            self.serial_port.baudrate = baud
+            self.serial_port.timeout = timeout
             self.serial_port.setDTR(False)
+            self.serial_port.open()
             print 'Setup Sucess'
         except serial.serialutil.SerialException:
             # no serial connection
@@ -71,8 +77,8 @@ class SerialData(object):
             try:
                 data = {}
                 timeStamp = time.time() - zeroTime
+                print raw_line
                 for d in raw_line.split():
-                    print d
                     key = d.split(':')[0]
                     val = d.split(':')[1]
                     data[key] = (timeStamp, val)
@@ -81,6 +87,10 @@ class SerialData(object):
                 return data
             except ValueError:
                 time.sleep(.005)
+            except IndexError:
+                print 'reset'
+                sys.exit()
+                break
         return None
 
     def __del__(self):
@@ -95,6 +105,10 @@ def main():
         portName = 'COM3'
     elif OS == 'Linux':
         portName = '/dev/ttyACM0'
+        with open(portName) as f:
+            attrs = termios.tcgetattr(f)
+            attrs[2] = attrs[2] & ~termios.HUPCL
+            termios.tcsetattr(f, termios.TCSAFLUSH, attrs)
     else:
         print "UNSUPPORTED OS " + OS
         return
