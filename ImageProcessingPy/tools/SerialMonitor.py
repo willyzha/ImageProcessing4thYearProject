@@ -4,17 +4,19 @@ from threading import Thread
 import matplotlib.pyplot as plt
 import csv
 import cv2
+import platform
 
 last_received = ''
 runTread = False
 zeroTime = time.time()
+complete = False
 
 fig = plt.figure()
 ax1 = fig.add_subplot(1,1,1)
 
 
 def receiving(serial_port):
-    global last_received, runTread
+    global last_received, runTread, complete
     runTread = True
     buff = ''
     while runTread:
@@ -26,6 +28,8 @@ def receiving(serial_port):
             # filled line, so you could make the above statement conditional
             # like so: if lines[-2]: last_received = lines[-2]
             buff = lines[-1]
+
+    complete = True
 
 def plot():
     global runThread
@@ -48,6 +52,7 @@ class SerialData(object):
     def __init__(self, port, baud, timeout):
         try:
             self.serial_port = serial.Serial(port, baud, timeout=timeout)
+            self.serial_port.setDTR(False)
             print 'Setup Sucess'
         except serial.serialutil.SerialException:
             # no serial connection
@@ -82,13 +87,25 @@ class SerialData(object):
         if self.serial_port is not None:
             self.serial_port.close()
 
-if __name__ == '__main__':
-    s = SerialData('COM3', 115200, timeout=1) # port=/dev/ttyS[0123] for raspberry pi
+def main():
+    global last_received, runTread, complete
+    OS = platform.system()
+    portName = ''
+    if OS == 'Windows':
+        portName = 'COM3'
+    elif OS == 'Linux':
+        portName = '/dev/ttyACM0'
+    else:
+        print "UNSUPPORTED OS " + OS
+        return
+        
+    s = SerialData(portName, 115200, timeout=1) # port=/dev/ttyS[0123] for raspberry pi
     #plt.ion()
     plot = False
     data = {}
     files = {}
     Thread(target=plot).start()
+    
     try:
         while True:#for i in range(500):
             time.sleep(0.01)
@@ -100,6 +117,9 @@ if __name__ == '__main__':
     #                     data[key]['time'].append(ret[key][0])
     #                     data[key]['val'].append(ret[key][1])
                     else:
+                        if "*" in key:
+                            continue
+                        
                         print "new key:" + key
                         files[key] = open(key+'.csv', 'w')
                         files[key].write('time,'+key+'\n')
@@ -113,7 +133,13 @@ if __name__ == '__main__':
 #         w.writerow([key, val])
 #         
 #     print data
-    
     runTread = False
+    complete = False
+    while complete is False:
+        continue
+    
     print "done!"
 
+
+if __name__ == '__main__':
+    main()

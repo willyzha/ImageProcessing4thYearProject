@@ -9,6 +9,7 @@ import sys, serial, argparse
 import numpy as np
 from time import sleep
 from collections import deque
+import platform
 
 import matplotlib.pyplot as plt 
 import matplotlib.animation as animation
@@ -21,6 +22,7 @@ class AnalogPlot:
     def __init__(self, strPort, maxLen):
         # open serial port
         self.ser = serial.Serial(strPort, 115200)
+        self.ser.setDTR(False)
     
         self.a = {}
         self.ax = deque([0.0]*maxLen)
@@ -89,6 +91,8 @@ class AnalogPlot:
 #                     data[key]['val'].append(ret[key][1])
         else:
             try:
+                if "*" in key:
+                    return
                 print "new key:" + key
                 self.files[key] = open(key+'.csv', 'w')
             except IOError:
@@ -102,13 +106,21 @@ def main():
     # create parser
     parser = argparse.ArgumentParser(description="LDR serial")
     # add expected arguments
-    parser.add_argument('--port', dest='port', required=True)
+    parser.add_argument('--port', dest='port')
     
     # parse args
     args = parser.parse_args()
     
     #strPort = '/dev/tty.usbserial-A7006Yqh'
     strPort = args.port
+    OS = platform.system()
+    if OS == 'Windows':
+        strPort = 'COM3'
+    elif OS == 'Linux':
+        strPort = '/dev/ttyACM0'
+    else:
+        print "UNSUPPORTED OS " + OS
+        return
     
     print('reading from serial port %s...' % strPort)
     
@@ -132,8 +144,10 @@ def main():
                                    interval=50)
     
     # show plot
-    plt.show()
-    
+    try:
+        plt.show()
+    except AttributeError:
+        return
     # clean up
     analogPlot.close()
     
