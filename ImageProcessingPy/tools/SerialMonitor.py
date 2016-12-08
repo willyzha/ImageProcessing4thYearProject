@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import csv
 import cv2
 import platform
-import termios
+#import termios
 import sys
 
 last_received = ''
@@ -74,22 +74,25 @@ class SerialData(object):
         for i in range(40):
             raw_line = last_received
             
+            if 'Init' in raw_line:
+                print raw_line
+                sys.exit()
+            
             try:
                 data = {}
                 timeStamp = time.time() - zeroTime
                 print raw_line
-                for d in raw_line.split():
-                    key = d.split(':')[0]
-                    val = d.split(':')[1]
-                    data[key] = (timeStamp, val)
+#                 for d in raw_line.split():
+#                     key = d.split(':')[0]
+#                     val = d.split(':')[1]
+#                     data[key] = (timeStamp, val)
                 
                 #data['time'] = timeStamp
-                return data
+                return None
             except ValueError:
                 time.sleep(.005)
             except IndexError:
                 print 'reset'
-                sys.exit()
                 break
         return None
 
@@ -105,10 +108,10 @@ def main():
         portName = 'COM3'
     elif OS == 'Linux':
         portName = '/dev/ttyACM0'
-        with open(portName) as f:
-            attrs = termios.tcgetattr(f)
-            attrs[2] = attrs[2] & ~termios.HUPCL
-            termios.tcsetattr(f, termios.TCSAFLUSH, attrs)
+#         with open(portName) as f:
+#             attrs = termios.tcgetattr(f)
+#             attrs[2] = attrs[2] & ~termios.HUPCL
+#             termios.tcsetattr(f, termios.TCSAFLUSH, attrs)
     else:
         print "UNSUPPORTED OS " + OS
         return
