@@ -385,7 +385,7 @@ class ImageProcessor:
         
         targetLost = False
         track_box = None
-        
+        start_area = None
         
         while self.capturing:
             startTime = time.time()
@@ -395,11 +395,11 @@ class ImageProcessor:
             mask = cv2.inRange(self.frameHsv, lowerb, upperb)
             vis = self.convertFrame(self.frameHsv.copy(), mask)
             #hsv = cv2.cvtColor(self.frameHsv, cv2.COLOR_BGR2HSV)
-
             
             # calculate histogram
             if self.selection:
                 targetLost = False
+                start_area = None
                 x0, y0, x1, y1 = self.selection
                 self.track_window = (x0, y0, x1-x0, y1-y0)
                 hsv_roi = self.frameHsv[y0:y1, x0:x1]
@@ -431,6 +431,14 @@ class ImageProcessor:
                 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
                 
+                # F = (P * D) / W 
+                # F = (519px * 20cm)/7.2cm
+                diameter = max(track_box[1][0], track_box[1][1])
+                #TODO: SIZE OF OBJECT IS HERE
+                distance = (6.528 * self.camera.getFocalLength())/diameter
+                
+                print distance
+                                   
                 diff = compareHist(self.frameHsv, self.track_window, self.modelHist, lowerb, upperb)
                 self.diffAvgStd.update(diff)
                 if not self.diffAvgStd.inRange(diff, 3):

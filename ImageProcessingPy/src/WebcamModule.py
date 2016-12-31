@@ -8,7 +8,7 @@ class Webcam(CameraModule):
         self.camera = cv2.VideoCapture(0)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
-        
+        self.selectFocalLength(resolution)
         self.stopped = False
         self.grabbed = False
         self.frame = None
@@ -40,3 +40,15 @@ class Webcam(CameraModule):
         self.stopped = True
         time.sleep(0.1)
         self.camera.release()
+        
+    def getFocalLength(self):
+        return self.focalLength
+        
+    def selectFocalLength(self, resolution):
+        # F = (P * D) / H 
+        if resolution[0] == 1280 and resolution[1] == 720:
+            self.focalLength = (519 * 20)/7.2  # F = (519px * 20cm)/7.2cm
+        elif resolution[0] == 640 and resolution[1] == 480:
+            self.focalLength = (310 * 20)/7.2  # F = (310px * 20cm)/7.2cm
+        else:
+            self.focalLength = None
