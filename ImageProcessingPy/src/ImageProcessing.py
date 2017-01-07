@@ -430,21 +430,21 @@ class ImageProcessor:
                 #set termination criteria and find new object location
                 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
-                
-                # F = (P * D) / W 
-                # F = (519px * 20cm)/7.2cm
-                diameter = max(track_box[1][0], track_box[1][1])
-                #TODO: SIZE OF OBJECT IS HERE
-                distance = (6.528 * self.camera.getFocalLength())/diameter
-                
-                print distance
-                                   
+                                                  
                 diff = compareHist(self.frameHsv, self.track_window, self.modelHist, lowerb, upperb)
                 self.diffAvgStd.update(diff)
                 if not self.diffAvgStd.inRange(diff, 3):
                     print "target lost"
                     targetLost = True
-
+                else:
+                    # F = (P * D) / W 
+                    # F = (519px * 20cm)/7.2cm
+                    diameter = max(track_box[1][0], track_box[1][1])
+                    #TODO: SIZE OF OBJECT IS HERE
+                    distance = (6.528 * self.camera.getFocalLength())/diameter
+                    
+                    print distance
+                    
                 if self.show_backproj:
                     vis[:] = prob[...,np.newaxis]
                 try:
