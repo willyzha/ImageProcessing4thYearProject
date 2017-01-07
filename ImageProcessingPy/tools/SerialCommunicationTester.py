@@ -31,15 +31,16 @@ class SerialPort():
             time.sleep(0.001)
 
 def main():
-    port = SerialPort('COM3', 9600, 2)
-
-    try:
-        while True:
-            port.write("100,200,500,600\n".encode())
-            print(port.read())
-    except KeyboardInterrupt:
-        port.stopThread()
-        pass
+	port = SerialPort('COM3', 9600, 2)
+	test = "100,200,500,600\n"
+	try:
+		while True:
+			port.write(test.encode())
+			if "Flag: " in port.read():
+				print(port.read())
+	except KeyboardInterrupt:
+		port.stopThread()
+		pass
 
 if __name__ == '__main__':
     main()
