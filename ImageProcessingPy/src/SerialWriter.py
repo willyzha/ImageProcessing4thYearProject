@@ -13,15 +13,17 @@ class SerialPort():
         
     def write(self, text):
     #self.serialPort.open()
-        
-        self.serialPort.write(text)
+        checkSum = self.checkSum(text)
+        serialData = str(checkSum) + "*" + text.strip() + "\n"
+        self.serialPort.write(serialData.encode())
 
     def receiving(self):
         self.ThreadStarted = True
         while self.runThread:
             ## TODO: NEED TO ADD CHECKSUM HERE
             ## AND ALSO FLAG CHECK???
-            self.last_received = self.serialPort.readline().strip()
+            if "Flag: " in port.read():
+                self.last_received = self.serialPort.readline().strip()
             #print(self.last_received)
         self.ThreadStarted = False
 
@@ -38,6 +40,14 @@ class SerialPort():
     def close(self):
         self.stopThread()
         self.serialPort.close()
+
+    def checkSum(self,s):
+        sum = 0
+        for c in s:
+            #print(c)
+            sum += c
+        #print(sum)
+        return sum
     
 def main():
     port = SerialPort('COM3', 115200, 2)
