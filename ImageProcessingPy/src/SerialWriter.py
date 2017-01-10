@@ -19,7 +19,9 @@ class SerialPort():
     def receiving(self):
         self.ThreadStarted = True
         while self.runThread:
-            self.last_received = self.serialPort.readline()
+            ## TODO: NEED TO ADD CHECKSUM HERE
+            ## AND ALSO FLAG CHECK???
+            self.last_received = self.serialPort.readline().strip()
             #print(self.last_received)
         self.ThreadStarted = False
 

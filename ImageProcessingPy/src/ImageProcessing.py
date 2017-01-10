@@ -10,6 +10,7 @@ from HistogramPlotter import plotHsvHist
 from ServoController import ServoController
 from threading import Thread
 from SerialWriter import SerialPort
+from serial.serialutil import SerialException
 
 # initialize the current frameHsv of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -175,15 +176,19 @@ class ImageProcessor:
                     self.tracking_state = 1
                     
     def serialSetup(self):
-        self.serialport = SerialPort('COM3', 115200, 2)
+        try:
+            self.serialport = SerialPort('COM3', 115200, 2)
+        except SerialException:
+            print ("Failed to open serial port")            
         
     def serialClose(self):
         if self.serialport is not None:
             self.serialport.close()
     
     def outputControlCommands(self, coordinates, distance):
-        self.serialport.write(str(coordinates[0]) + " " + str(coordinates[1]) + " " + str(distance) + "\n")
-        print self.serialport.read().strip()
+        if self.serialport is not None:
+            self.serialport.write(str(coordinates[0]) + " " + str(coordinates[1]) + " " + str(distance) + "\n")
+            print self.serialport.read().strip()
     
     def redetectionAlg(self, aFrame, aRoiHist, aLastArea, aDiffThresh, lowerb, upperb):
         """ Algorithm for redetecting the object after it is lost
