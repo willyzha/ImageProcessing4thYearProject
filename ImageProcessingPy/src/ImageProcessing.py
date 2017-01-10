@@ -11,6 +11,9 @@ from ServoController import ServoController
 from threading import Thread
 from SerialWriter import SerialPort
 from serial.serialutil import SerialException
+import platform
+import termios
+import sys
 
 # initialize the current frameHsv of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -177,7 +180,13 @@ class ImageProcessor:
                     
     def serialSetup(self):
         try:
-            self.serialport = SerialPort('COM3', 115200, 2)
+            OS = platform.system()
+            if OS == 'Windows':
+                portName = 'COM3'
+                self.serialport = SerialPort(portName, 115200, 2)
+            elif OS == 'Linux':
+                portName = '/dev/ttyACM0'
+                self.serialport = SerialPort(portName, 115200, 2)
         except SerialException:
             print ("Failed to open serial port")            
         
