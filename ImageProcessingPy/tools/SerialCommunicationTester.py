@@ -32,12 +32,12 @@ class SerialPort():
 
 def main():
 	port = SerialPort('COM3', 9600, 2)
-	test = "100,200,500,600\n"
+	test ="?*100,200,500,600\n"
 	try:
 		while True:
 			port.write(test.encode())
-			if "Flag: " in port.read():
-				print(port.read())
+			#if "Flag: " in port.read():
+			print(port.read())
 	except KeyboardInterrupt:
 		port.stopThread()
 		pass
