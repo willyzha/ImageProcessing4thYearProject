@@ -9,6 +9,7 @@ from math import sqrt
 from HistogramPlotter import plotHsvHist
 from ServoController import ServoController
 from threading import Thread
+from SerialWriter import SerialPort
 
 # initialize the current frameHsv of the video, along with the list of
 # ROI points along with whether or not this is input mode
@@ -143,6 +144,11 @@ class ImageProcessor:
         
         self.frameHsv = None
         
+        self.serialWriter = None
+        self.serialport = None
+        self.serialSetup()
+        
+        
     def onmouse(self, event, x, y, flags, param):
         x, y = np.int16([x, y]) # BUG
 
@@ -168,6 +174,17 @@ class ImageProcessor:
                 if self.selection is not None:
                     self.tracking_state = 1
                     
+    def serialSetup(self):
+        self.serialport = SerialPort('COM3', 115200, 2)
+        
+    def serialClose(self):
+        if self.serialport is not None:
+            self.serialport.close()
+    
+    def outputControlCommands(self, coordinates, distance):
+        self.serialport.write(str(coordinates[0]) + " " + str(coordinates[1]) + " " + str(distance) + "\n")
+        print self.serialport.read().strip()
+    
     def redetectionAlg(self, aFrame, aRoiHist, aLastArea, aDiffThresh, lowerb, upperb):
         """ Algorithm for redetecting the object after it is lost
             Inputs:
@@ -250,6 +267,7 @@ class ImageProcessor:
     def quitImageProcessing(self):
         self.endImageProcessing()
         self.camera.release()
+        self.serialClose()
         
     def setOutputMode(self, val):
         print val
@@ -430,7 +448,7 @@ class ImageProcessor:
                 #set termination criteria and find new object location
                 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
-                                                  
+                center = track_box[0]                                  
                 diff = compareHist(self.frameHsv, self.track_window, self.modelHist, lowerb, upperb)
                 self.diffAvgStd.update(diff)
                 if not self.diffAvgStd.inRange(diff, 3):
@@ -443,7 +461,9 @@ class ImageProcessor:
                     #TODO: SIZE OF OBJECT IS HERE
                     distance = (6.528 * self.camera.getFocalLength())/diameter
                     
-                    print distance
+                    self.outputControlCommands(center, distance)
+                    
+                    #print distance
                     
                 if self.show_backproj:
                     vis[:] = prob[...,np.newaxis]
@@ -452,7 +472,7 @@ class ImageProcessor:
                 except:
                     print(track_box)
                 
-                center = track_box[0]
+                
                 centerPoint = point('Coordinates', center[0], center[1], (255,0,0), '('+str(center[0])+','+str(center[1])+')')
                 diffText = text("diff=("+'{0:.5f}'.format(diff)+")", (150,self.resolution[1]-10), (0,255,0))
                 
@@ -476,6 +496,7 @@ class ImageProcessor:
                     break
                 if ch == ord('b'):
                     self.show_backproj = not self.show_backproj
+        #self.serialClose()
         cv2.destroyWindow('camshift')
    
 if __name__ == "__main__":
