@@ -13,14 +13,17 @@ class SerialPort():
         
     def write(self, text):
     #self.serialPort.open()
-        
-        self.serialPort.write(text)
+        checkSum = self.checkSum(text)
+        endString = str(checkSum) + "*" + text.decode('utf-8') + "\n"
+        print("Output: " + endString)
+        self.serialPort.write(endString.encode())
 
     def receiving(self):
         self.ThreadStarted = True
+        print("Anything")
         while self.runThread:
             self.last_received = self.serialPort.readline()
-            #print(self.last_received)
+            print("Last Line: " + str(self.last_received))
 
     def read(self):
         return self.last_received
@@ -30,17 +33,25 @@ class SerialPort():
         while self.ThreadStarted:
             time.sleep(0.001)
 
+    def checkSum(self,s):
+        sum = 0
+        for c in s:
+            #print(c)
+            sum += c
+        #print(sum)
+        return sum
+
 def main():
-    port = SerialPort('COM3', 9600, 2)
-    test = "100,200,500,600\n"
-    try:
-        while True:
-            port.write(test.encode())
-            if "Flag: " in port.read():
-                print(port.read())
-    except KeyboardInterrupt:
-        port.stopThread()
-        pass
+	port = SerialPort('COM3', 115200, 2)
+	test ="100, 200, 500, 600"
+	try:
+		while True:
+			port.write(test.encode())
+			#if "Flag: " in port.read():
+			#print(port.read())
+	except KeyboardInterrupt:
+		port.stopThread()
+		pass
 
 if __name__ == '__main__':
     main()
