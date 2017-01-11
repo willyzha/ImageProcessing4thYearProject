@@ -1,21 +1,26 @@
 import serial
 import time
 from threading import Thread
+from serial.serialutil import SerialException
+import platform
+import termios
+import sys
 
 class SerialPort():
-    def __init__(self, port, baudRate, timeout):
+    def __init__(self, port, baudRate, timeout, DEBUG=False):
         self.serialPort = serial.Serial(port, baudRate, timeout=timeout)
         time.sleep(1)
         self.runThread = True
         self.ThreadStarted = False
         self.last_received = ""
+        self.DEBUG = DEBUG
         Thread(target=self.receiving, args=()).start()
         
     def write(self, text):
     #self.serialPort.open()
         checkSum = self.checkSum(text.strip())
         serialData = str(checkSum) + "*" + text.strip() + "\n"
-        print "send: " + serialData.strip()
+        #print "send: " + serialData.strip()
         self.serialPort.write(serialData.encode())
 
     def receiving(self):
@@ -24,9 +29,11 @@ class SerialPort():
             ## TODO: NEED TO ADD CHECKSUM HERE
             ## AND ALSO FLAG CHECK???
             serialMessage = self.serialPort.readline().strip()
+            if self.DEBUG:
+                print serialMessage
             if "Flag: " in serialMessage:
                 self.last_received = serialMessage
-            print(self.last_received)
+
         self.ThreadStarted = False
 
     def read(self):
@@ -44,25 +51,36 @@ class SerialPort():
         self.serialPort.close()
 
     def checkSum(self,s):
-        sum = 0
+        checksum = 0
         for c in s:
-            #print(c)
-            sum += ord(c)
-        #print(sum)
-        return sum
+            checksum += ord(c)
+        return checksum
     
 def main():
-    port = SerialPort('COM3', 115200, 2)
-    test = "100,200,500,600\n"
+    serialport = None
     try:
-        while True:
-            port.write(test.encode())
-            if "Flag: " in port.read():
-                print(port.read().strip())
-            raise KeyboardInterrupt
-    except KeyboardInterrupt:
-        port.close()
-        pass
+        OS = platform.system()
+        if OS == 'Windows':
+            print 'WINDOWS'
+            portName = 'COM3'
+            serialport = SerialPort(portName, 115200, 2, True)
+        elif OS == 'Linux':
+            print 'LINUX'
+            portName = '/dev/ttyACM0'
+            serialport = SerialPort(portName, 115200, 2, True)
+
+        try:
+            while True:
+                ## CH1 CH2 CH3 CH4
+                serialport.write("-1 1000 1000 1000")
+                time.sleep(0.0167)
+        except KeyboardInterrupt:
+            serialport.close()
+            pass
+    except SerialException:
+        print ("Failed to open serial port")
+    
+
 
 if __name__ == '__main__':
     main()
