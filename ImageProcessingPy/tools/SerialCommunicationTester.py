@@ -14,9 +14,8 @@ class SerialPort():
     def write(self, text):
     #self.serialPort.open()
         checkSum = self.checkSum(text)
-        endString = str(checkSum) + "*" + text.decode('utf-8') + "\n"
-        print("Output: " + endString)
-        self.serialPort.write(endString.encode())
+        serialData = str(checkSum) + "*" + text + "\n"
+        self.serialPort.write(serialData.encode())
 
     def receiving(self):
         self.ThreadStarted = True
@@ -33,25 +32,25 @@ class SerialPort():
         while self.ThreadStarted:
             time.sleep(0.001)
 
-    def checkSum(self,s):
+    def checkSum(self, s):
         sum = 0
         for c in s:
             #print(c)
-            sum += c
+            sum += ord(c)
         #print(sum)
         return sum
 
 def main():
-	port = SerialPort('COM3', 115200, 2)
-	test ="100, 200, 500, 600"
-	try:
-		while True:
-			port.write(test.encode())
-			#if "Flag: " in port.read():
-			#print(port.read())
-	except KeyboardInterrupt:
-		port.stopThread()
-		pass
+    port = SerialPort('COM3', 115200, 2)
+        test ="100, 200, 500, 600"
+        try:
+            while True:
+                port.write(test)
+                #if "Flag: " in port.read():
+                #print(port.read())
+        except KeyboardInterrupt:
+            port.stopThread()
+            pass
 
 if __name__ == '__main__':
     main()
