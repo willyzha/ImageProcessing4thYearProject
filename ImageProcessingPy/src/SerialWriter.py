@@ -3,7 +3,6 @@ import time
 from threading import Thread
 from serial.serialutil import SerialException
 import platform
-import termios
 import sys
 
 class SerialPort():
@@ -28,12 +27,16 @@ class SerialPort():
         while self.runThread:
             ## TODO: NEED TO ADD CHECKSUM HERE
             ## AND ALSO FLAG CHECK???
-            serialMessage = self.serialPort.readline().strip()
+            serialMessage = self.serialPort.readline().strip().decode('utf-8')
+            checkSumReceivedStr, serialMessage = serialMessage.split("*")
+            checkSumReceived = int(checkSumReceivedStr)
+            _, value = serialMessage.split(":")
+            checkSumCalc = self.checkSum(value.strip())
             if self.DEBUG:
-                print serialMessage
-            if "Flag: " in serialMessage:
-                self.last_received = serialMessage
-
+                print (serialMessage)
+            if checkSumReceived == checkSumCalc:
+                if "Flag: " in serialMessage:
+                    self.last_received = serialMessage
         self.ThreadStarted = False
 
     def read(self):
@@ -41,10 +44,10 @@ class SerialPort():
 
     def stopThread(self):
         self.runThread = False
-        print 'stopping thread'
+        print ('stopping thread')
         while self.ThreadStarted:
             time.sleep(0.001)
-        print 'threadStopped'
+        print ('threadStopped')
             
     def close(self):
         self.stopThread()
@@ -61,11 +64,11 @@ def main():
     try:
         OS = platform.system()
         if OS == 'Windows':
-            print 'WINDOWS'
+            print ('WINDOWS')
             portName = 'COM3'
             serialport = SerialPort(portName, 115200, 2, True)
         elif OS == 'Linux':
-            print 'LINUX'
+            print ('LINUX')
             portName = '/dev/ttyACM0'
             serialport = SerialPort(portName, 115200, 2, True)
 
