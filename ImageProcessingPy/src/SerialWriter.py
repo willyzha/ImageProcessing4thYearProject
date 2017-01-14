@@ -18,19 +18,16 @@ class SerialPort():
     def write(self, text):
     #self.serialPort.open()
         checkSum = self.checkSum(text.strip())
-        serialData = str(checkSum) + "*" + text.strip() + "\n"
+        serialData = str(checkSum) + " " + text.strip() + "\n"
         #print "send: " + serialData.strip()
         self.serialPort.write(serialData.encode())
 
     def receiving(self):
         self.ThreadStarted = True
         while self.runThread:
-            ## TODO: NEED TO ADD CHECKSUM HERE
-            ## AND ALSO FLAG CHECK???
             serialMessage = self.serialPort.readline().strip().decode('utf-8')
-            checkSumReceivedStr, serialMessage = serialMessage.split("*")
-            checkSumReceived = int(checkSumReceivedStr)
-            _, value = serialMessage.split(":")
+            checkSumReceivedStr, value = serialMessage.split(" ",1)
+            checkSumReceived = safe_cast(checkSumReceivedStr,int)
             checkSumCalc = self.checkSum(value.strip())
             if self.DEBUG:
                 print (serialMessage)
@@ -58,6 +55,12 @@ class SerialPort():
         for c in s:
             checksum += ord(c)
         return checksum
+
+def safe_cast(val, to_type, default = None):
+    try:
+        return to_type(val)
+    except (ValueError, TypeError):
+        return default
     
 def main():
     serialport = None
@@ -65,7 +68,7 @@ def main():
         OS = platform.system()
         if OS == 'Windows':
             print ('WINDOWS')
-            portName = 'COM3'
+            portName = 'COM4'
             serialport = SerialPort(portName, 115200, 2, True)
         elif OS == 'Linux':
             print ('LINUX')
@@ -75,7 +78,7 @@ def main():
         try:
             while True:
                 ## CH1 CH2 CH3 CH4
-                serialport.write("-1 1000 1000 1000")
+                serialport.write("Flag: 100 200 500 600")
                 time.sleep(0.0167)
         except KeyboardInterrupt:
             serialport.close()
