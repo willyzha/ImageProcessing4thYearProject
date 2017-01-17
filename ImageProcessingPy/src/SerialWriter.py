@@ -24,13 +24,21 @@ class SerialPort():
 
     def receiving(self):
         self.ThreadStarted = True
+        targetFile = None
+        if self.DEBUG:
+            targetFile = open('trace.log', 'w')
         while self.runThread:
-            serialMessage = self.serialPort.readline().strip().decode('utf-8')
-            checkSumReceivedStr, value = serialMessage.split(" ",1)
-            checkSumReceived = safe_cast(checkSumReceivedStr,int)
-            checkSumCalc = self.checkSum(value.strip())
+            serialMessage = self.serialPort.readline().strip()
             if self.DEBUG:
                 print (serialMessage)
+                targetFile.write(serialMessage + "\n")
+            try:
+                checkSumReceivedStr, value = serialMessage.split(" ",1)
+            except ValueError:
+                continue
+            checkSumReceived = safe_cast(checkSumReceivedStr,int)
+            checkSumCalc = self.checkSum(value.strip())
+
             if checkSumReceived == checkSumCalc:
                 if "Flag: " in serialMessage:
                     self.last_received = serialMessage
