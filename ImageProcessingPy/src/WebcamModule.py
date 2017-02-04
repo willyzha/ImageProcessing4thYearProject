@@ -51,4 +51,4 @@ class Webcam(CameraModule):
         elif resolution[0] == 640 and resolution[1] == 480:
             self.focalLength = (310 * 20)/7.2  # F = (310px * 20cm)/7.2cm
         else:
-            self.focalLength = None
+            raise ValueError("Unsupported " + str(resolution) +" resolution")

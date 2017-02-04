@@ -10,9 +10,10 @@ from HistogramPlotter import plotHsvHist
 from ServoController import ServoController
 from threading import Thread
 from SerialWriter import SerialPort
+from PIDContoller import PID
 from serial.serialutil import SerialException
 import platform
-import termios
+#import termios
 import sys
 
 # initialize the current frameHsv of the video, along with the list of
@@ -92,6 +93,10 @@ class RunningAvgStd:
         self.mean = 0
         self.std = 0
     
+def map(x, in_min, in_max, out_min, out_max):
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+
+
 def compareHist(frame, roiWindow, refHist, lowerb, upperb):  
     """ Compares the histogram of the roiWindow in frameHsv with refHist
     """
@@ -129,6 +134,7 @@ class ImageProcessor:
         self.capturing = False
         self.camera = cameraModule
         self.resolution = res
+        self.fixedDistance = -1
         self.avgFilterN = avgFilterN
         self.roiPts = []
         self.outputMode = "BGR"
@@ -147,6 +153,13 @@ class ImageProcessor:
         self.show_backproj = False
         
         self.frameHsv = None
+        
+        self.pidx = PID(P=0.5, I=0, D=0)
+        self.pidx.SetPoint = 0
+        self.pidy = PID(P=0.5, I=0, D=0)
+        self.pidy.SetPoint = 0
+        self.pidz = PID(P=0.5, I=0, D=0)
+        self.pidz.SetPoint = 2 # 2m
         
         self.serialWriter = None
         self.serialport = None
@@ -194,10 +207,32 @@ class ImageProcessor:
         if self.serialport is not None:
             self.serialport.close()
     
-    def outputControlCommands(self, coordinates, distance):
+    def outputControlCommands(self, coordinates, distance):       
+        #Calculate errors
+        e_x = map(coordinates[0], 0, self.resolution[0], -23, 23) # TDOD: calculate angle
+        e_y = map(coordinates[1], 0, self.resolution[1], -45, 45) # TODO: calculate vertical distance
+        e_z = distance - self.fixedDistance
+        
+        #print e_x, e_y, e_z
+        
+        self.pidx.update(e_x) # Need to scale these values
+        self.pidy.update(e_y)
+        self.pidz.update(e_z)
+        
+        controlx = self.pidx.output
+        controly = self.pidy.output
+        controlz = self.pidz.output
+        
+        controlx = max(min(controlx, 100),-100)
+        controly = max(min(controly, 10),-100)
+        controlz = max(min(controlz, 100),-100)
+        
+        output = str(controlx) + " " + str(controly) + " " + str(controlz) + "\n"
         if self.serialport is not None:
-            self.serialport.write(str(coordinates[0]) + " " + str(coordinates[1]) + " " + str(distance) + "\n")
-            print self.serialport.read().strip()
+            self.serialport.write(output)
+        else:
+            print output
+            #print self.serialport.read().strip()
     
     def redetectionAlg(self, aFrame, aRoiHist, aLastArea, aDiffThresh, lowerb, upperb):
         """ Algorithm for redetecting the object after it is lost
@@ -443,10 +478,11 @@ class ImageProcessor:
                     self.show_hist()
 
                 vis_roi = vis[y0:y1, x0:x1]
-                cv2.bitwise_not(vis_roi, vis_roi)
-                vis[mask == 0] = 0
+                cv2.rectangle(vis, (x0, y0), (x1, y1), (0, 0, 255), 2)
+                #cv2.bitwise_not(vis_roi, vis_roi)
+                #vis[mask == 0] = 0
 
-            if targetLost:
+            if targetLost and RETECTION_ENABLED:
                 lastArea = track_box[1][0] * track_box[1][1] * 3.14
                 redetectedRoi = self.redetectionAlg(self.frameHsv, self.modelHist, lastArea, self.diffAvgStd.getThreshold(3), lowerb, upperb)
                 if redetectedRoi is not None:
@@ -473,7 +509,12 @@ class ImageProcessor:
                     # F = (519px * 20cm)/7.2cm
                     diameter = max(track_box[1][0], track_box[1][1])
                     #TODO: SIZE OF OBJECT IS HERE
-                    distance = (6.528 * self.camera.getFocalLength())/diameter
+                    
+                    distance = -1
+                    if diameter > 0:
+                        distance = (6.528 * self.camera.getFocalLength())/diameter
+                        if self.fixedDistance == -1:
+                            self.fixedDistance = distance
                     
                     self.outputControlCommands(center, distance)
                     
