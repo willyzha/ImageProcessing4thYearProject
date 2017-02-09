@@ -26,7 +26,7 @@ LOWER_MASK_BOUND = np.array([0,40,90])
 UPPER_MASK_BOUND = np.array([255,255,255])
 
 # ENABLE/DISABLE TRACKING HALTING AND REDETECTION
-RETECTION_ENABLED = False
+RETECTION_ENABLED = True
 
 text = namedtuple('text', ['text', 'origin', 'color'])
 point = namedtuple('point', ['name', 'x', 'y', 'color', 'text'])
@@ -219,16 +219,16 @@ class ImageProcessor:
         self.pidy.update(e_y)
         self.pidz.update(e_z)
         
-        controlx = self.pidx.output
-        controly = self.pidy.output
-        controlz = self.pidz.output
+        controlx = self.pidx.output * 100 # centi-degrees
+        controly = self.pidy.output * 100 # centi-degrees
+        controlz = self.pidz.output * 100 # centi-degrees
         
-        controlx = max(min(controlx, 100),-100)
-        controly = max(min(controly, 10),-100)
-        controlz = max(min(controlz, 100),-100)
+        controlx = round(max(min(controlx, 100),-100))
+        controly = round(max(min(controly, 10),-100)) 
+        controlz = round(max(min(controlz, 100),-100))
         
         output = str(controlx) + " " + str(controly) + " " + str(controlz) + "\n"
-        if self.serialport is not None:
+        if self.serialport is not None and self.serialWriter is True:
             self.serialport.write(output)
         else:
             print output
@@ -363,6 +363,9 @@ class ImageProcessor:
 
     def setShowFps(self, showFps):
         self.showFps = showFps
+
+    def setSerialWriter(self, serialWriter):
+        self.serialWriter = serialWriter
 
     def getDebug(self):
         return self.debug

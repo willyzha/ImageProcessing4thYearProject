@@ -118,7 +118,7 @@ class Window(QtGui.QWidget):
         self.imageProcessor.setShowFps(cb.isChecked())
         
     def changeServoMode(self, cb):
-        self.imageProcessor.setServo(cb.isChecked())
+        self.imageProcessor.setSerialWriter(cb.isChecked())
 
     def closeEvent(self, event):
         self.quitCapture()
