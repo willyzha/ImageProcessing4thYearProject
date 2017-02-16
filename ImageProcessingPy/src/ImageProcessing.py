@@ -507,6 +507,7 @@ class ImageProcessor:
                 if not self.diffAvgStd.inRange(diff, 3):
                     print "target lost"
                     targetLost = True
+                    self.outputControlCommands((self.resolution[0]/2, self.resolution[1]/2), self.fixedDistance)
                 else:
                     # F = (P * D) / W 
                     # F = (519px * 20cm)/7.2cm
