@@ -456,6 +456,9 @@ class ImageProcessor:
         targetLost = False
         track_box = None
         start_area = None
+		
+        f = open('FrameTimeDataThreading.txt', 'w')
+        f.write("Frame time with threading\n")
         
         while self.capturing:
             startTime = time.time()
@@ -539,6 +542,9 @@ class ImageProcessor:
                 if self.showFps:
                     fps = calculateFrameRate(time.time() - startTime)
                     frameRateNum = number('fps', fps, (self.resolution[0]-25,15), (0,255,0))
+				
+                print str(time.time()-startTime)
+                f.write(str(time.time()-startTime)+"\n")
         
                 self.drawOverlay(vis, 
                                  crossHair=(self.resolution[0]/2, self.resolution[1]/2, 10), 
@@ -546,6 +552,7 @@ class ImageProcessor:
                                  textToDraw=[diffText], 
                                  pointsToDraw=[centerPoint], 
                                  numToDraw=frameRateNum)
+                
 
             if self.outputMode is not "None" and vis is not None:
                 cv2.imshow("camshift", vis)
