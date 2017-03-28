@@ -356,10 +356,13 @@ class ImageProcessor:
         #For matlab analysis
         #open("../../MatlabScripts/diff.txt", "w").close()
         
+        f = open('SpeedData.txt', 'w')
+		f.write("Frame times with no treading\n")
+		
         # keep looping over the frames
         while self.capturing:
+            processingTime = time.time()
             
-            printTime(" Start getFrame(): ")
             
             # grab the current frame
             (grabbed, frame) = self.camera.getFrame()
@@ -469,6 +472,10 @@ class ImageProcessor:
                     elif self.outputMode is "None":
                         print "TRACKING LOST " + str(trackingLost) + " fps=" + str(fps)
     
+	            			
+                processingTime = time.time() - processingTime
+                print processingTime
+                f.write(str(processingTime)+"\n")
                 printTime(" End tracking: ")
                 # For matlab analysis
                 # fo = open("../../MatlabScripts/diff.txt", 'a')
@@ -542,7 +549,8 @@ class ImageProcessor:
             elif key == ord("q"):
                 #print "Quitting"
                 break
-    
+
+
         # cleanup the camera and close any open windows
         #self.camera.release()
         cv2.destroyWindow("frame")
