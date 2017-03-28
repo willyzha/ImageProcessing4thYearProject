@@ -296,7 +296,7 @@ class ImageProcessor:
         for ellipse in candidateEllipse:
             boundingRect = cv2.boundingRect(cv2.boxPoints(ellipse))
             diff = compareHist(aFrame, boundingRect, aRoiHist, lowerb, upperb)
-      
+			
             if diff < aDiffThresh and diff < minDiff:
                 minDiff = diff
                 matchedRect = boundingRect
@@ -456,6 +456,9 @@ class ImageProcessor:
         targetLost = False
         track_box = None
         start_area = None
+		
+        f = open('DiffTest2.txt', 'w')
+        f.write("Diff data log\n")
         
         while self.capturing:
             startTime = time.time()
@@ -503,6 +506,10 @@ class ImageProcessor:
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
                 center = track_box[0]                                  
                 diff = compareHist(self.frameHsv, self.track_window, self.modelHist, lowerb, upperb)
+				
+                f.write(str(diff) + "\n")
+                print diff
+				
                 self.diffAvgStd.update(diff)
                 if not self.diffAvgStd.inRange(diff, 3):
                     print "target lost"
