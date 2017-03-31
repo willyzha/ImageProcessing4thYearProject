@@ -357,8 +357,8 @@ class ImageProcessor:
         #open("../../MatlabScripts/diff.txt", "w").close()
         
         f = open('SpeedData.txt', 'w')
-		f.write("Frame times with no treading\n")
-		
+        f.write("Frame times with no treading\n")
+
         # keep looping over the frames
         while self.capturing:
             processingTime = time.time()
@@ -472,7 +472,7 @@ class ImageProcessor:
                     elif self.outputMode is "None":
                         print "TRACKING LOST " + str(trackingLost) + " fps=" + str(fps)
     
-	            			
+
                 processingTime = time.time() - processingTime
                 print processingTime
                 f.write(str(processingTime)+"\n")
